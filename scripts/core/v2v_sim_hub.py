@@ -17,8 +17,9 @@ sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnura
 from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import blocks
-from gnuradio import gr
+from gnuradio import channels
 from gnuradio.filter import firdes
+from gnuradio import gr
 from gnuradio.fft import window
 import signal
 from PyQt5 import Qt
@@ -27,9 +28,7 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import gr, pdu
 from gnuradio import network
-from gnuradio import uhd
-import time
-from wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
+from scripts.core.wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
 import foo
 import ieee802_11
 import sip
@@ -72,7 +71,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         # Variables
         ##################################################
         self.tx_gain = tx_gain = 0.75
-        self.samp_rate = samp_rate = 5e6
+        self.samp_rate = samp_rate = 10e6
         self.rx_gain = rx_gain = 0.75
         self.lo_offset = lo_offset = 0
         self.freq = freq = 5890000000
@@ -83,9 +82,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._tx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
-        self._tx_gain_win = qtgui.RangeWidget(self._tx_gain_range, self.set_tx_gain, "'tx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._tx_gain_win)
         # Create the options list
         self._samp_rate_options = [5000000.0, 10000000.0, 20000000.0]
         # Create the labels list
@@ -102,25 +98,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             lambda i: self.set_samp_rate(self._samp_rate_options[i]))
         # Create the radio buttons
         self.top_layout.addWidget(self._samp_rate_tool_bar)
-        self._rx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
-        self._rx_gain_win = qtgui.RangeWidget(self._rx_gain_range, self.set_rx_gain, "'rx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._rx_gain_win)
-        # Create the options list
-        self._lo_offset_options = [0, 6000000.0, 11000000.0]
-        # Create the labels list
-        self._lo_offset_labels = ['0', '6000000.0', '11000000.0']
-        # Create the combo box
-        self._lo_offset_tool_bar = Qt.QToolBar(self)
-        self._lo_offset_tool_bar.addWidget(Qt.QLabel("'lo_offset'" + ": "))
-        self._lo_offset_combo_box = Qt.QComboBox()
-        self._lo_offset_tool_bar.addWidget(self._lo_offset_combo_box)
-        for _label in self._lo_offset_labels: self._lo_offset_combo_box.addItem(_label)
-        self._lo_offset_callback = lambda i: Qt.QMetaObject.invokeMethod(self._lo_offset_combo_box, "setCurrentIndex", Qt.Q_ARG("int", self._lo_offset_options.index(i)))
-        self._lo_offset_callback(self.lo_offset)
-        self._lo_offset_combo_box.currentIndexChanged.connect(
-            lambda i: self.set_lo_offset(self._lo_offset_options[i]))
-        # Create the radio buttons
-        self.top_layout.addWidget(self._lo_offset_tool_bar)
         # Create the options list
         self._freq_options = [2412000000.0, 2417000000.0, 2422000000.0, 2427000000.0, 2432000000.0, 2437000000.0, 2442000000.0, 2447000000.0, 2452000000.0, 2457000000.0, 2462000000.0, 2467000000.0, 2472000000.0, 2484000000.0, 5170000000.0, 5180000000.0, 5190000000.0, 5200000000.0, 5210000000.0, 5220000000.0, 5230000000.0, 5240000000.0, 5250000000.0, 5260000000.0, 5270000000.0, 5280000000.0, 5290000000.0, 5300000000.0, 5310000000.0, 5320000000.0, 5500000000.0, 5510000000.0, 5520000000.0, 5530000000.0, 5540000000.0, 5550000000.0, 5560000000.0, 5570000000.0, 5580000000.0, 5590000000.0, 5600000000.0, 5610000000.0, 5620000000.0, 5630000000.0, 5640000000.0, 5660000000.0, 5670000000.0, 5680000000.0, 5690000000.0, 5700000000.0, 5710000000.0, 5720000000.0, 5745000000.0, 5755000000.0, 5765000000.0, 5775000000.0, 5785000000.0, 5795000000.0, 5805000000.0, 5825000000.0, 5860000000.0, 5870000000.0, 5880000000.0, 5890000000.0, 5900000000.0, 5910000000.0, 5920000000.0]
         # Create the labels list
@@ -194,33 +171,12 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             frequency=freq,
             sensitivity=0.56,
         )
-        self.uhd_usrp_source_0 = uhd.usrp_source(
-            ",".join(('', "")),
-            uhd.stream_args(
-                cpu_format="fc32",
-                args='',
-                channels=list(range(0,1)),
-            ),
-        )
-        self.uhd_usrp_source_0.set_samp_rate(samp_rate)
-        self.uhd_usrp_source_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
-
-        self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
-        self.uhd_usrp_source_0.set_normalized_gain(rx_gain, 0)
-        self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            ",".join(('', "")),
-            uhd.stream_args(
-                cpu_format="fc32",
-                args='',
-                channels=list(range(0,1)),
-            ),
-            'packet_len',
-        )
-        self.uhd_usrp_sink_0.set_samp_rate(samp_rate)
-        self.uhd_usrp_sink_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
-
-        self.uhd_usrp_sink_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
-        self.uhd_usrp_sink_0.set_normalized_gain(tx_gain, 0)
+        self._tx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
+        self._tx_gain_win = qtgui.RangeWidget(self._tx_gain_range, self.set_tx_gain, "'tx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._tx_gain_win)
+        self._rx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
+        self._rx_gain_win = qtgui.RangeWidget(self._rx_gain_range, self.set_rx_gain, "'rx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._rx_gain_win)
         self.qtgui_const_sink_x_0 = qtgui.const_sink_c(
             (48*10), #size
             "", #name
@@ -263,29 +219,65 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self._qtgui_const_sink_x_0_win = sip.wrapinstance(self.qtgui_const_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_const_sink_x_0_win)
         self.pdu_pdu_to_tagged_stream_0 = pdu.pdu_to_tagged_stream(gr.types.complex_t, 'packet_len')
-        self.network_socket_pdu_1 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '54321', 10000, False)
-        self.network_socket_pdu_0 = network.socket_pdu('UDP_SERVER', '', '12345', 10000, False)
+        self.network_socket_pdu_1_1 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '50003', 10000, False)
+        self.network_socket_pdu_1_0_0_0 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '50005', 10000, False)
+        self.network_socket_pdu_1_0_0 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '50004', 10000, False)
+        self.network_socket_pdu_1_0 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '50002', 10000, False)
+        self.network_socket_pdu_1 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '50001', 10000, False)
+        self.network_socket_pdu_0 = network.socket_pdu('UDP_SERVER', '127.0.0.1', '50000', 10000, False)
+        # Create the options list
+        self._lo_offset_options = [0, 6000000.0, 11000000.0]
+        # Create the labels list
+        self._lo_offset_labels = ['0', '6000000.0', '11000000.0']
+        # Create the combo box
+        self._lo_offset_tool_bar = Qt.QToolBar(self)
+        self._lo_offset_tool_bar.addWidget(Qt.QLabel("'lo_offset'" + ": "))
+        self._lo_offset_combo_box = Qt.QComboBox()
+        self._lo_offset_tool_bar.addWidget(self._lo_offset_combo_box)
+        for _label in self._lo_offset_labels: self._lo_offset_combo_box.addItem(_label)
+        self._lo_offset_callback = lambda i: Qt.QMetaObject.invokeMethod(self._lo_offset_combo_box, "setCurrentIndex", Qt.Q_ARG("int", self._lo_offset_options.index(i)))
+        self._lo_offset_callback(self.lo_offset)
+        self._lo_offset_combo_box.currentIndexChanged.connect(
+            lambda i: self.set_lo_offset(self._lo_offset_options[i]))
+        # Create the radio buttons
+        self.top_layout.addWidget(self._lo_offset_tool_bar)
         self.ieee802_11_parse_mac_0 = ieee802_11.parse_mac(False, True)
         self.ieee802_11_mac_0 = ieee802_11.mac([0x12, 0x34, 0x56, 0x78, 0x90, 0xab], [0x30, 0x14, 0x4a, 0xe6, 0x46, 0xe4], [0x42, 0x42, 0x42, 0x42, 0x42, 0x42])
+        self.foo_wireshark_connector_0 = foo.wireshark_connector(127, False)
         self.foo_packet_pad2_0 = foo.packet_pad2(False, False, 0.001, 10000, 10000)
         self.foo_packet_pad2_0.set_min_output_buffer(100000)
+        self.channels_channel_model_0 = channels.channel_model(
+            noise_voltage=0,
+            frequency_offset=0.0,
+            epsilon=1.0,
+            taps=[1.0],
+            noise_seed=0,
+            block_tags=False)
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_cc(0.6)
         self.blocks_multiply_const_vxx_0.set_min_output_buffer(100000)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char*1, '/tmp/wifi.pcap', True)
+        self.blocks_file_sink_0.set_unbuffered(True)
 
 
         ##################################################
         # Connections
         ##################################################
         self.msg_connect((self.ieee802_11_mac_0, 'app out'), (self.network_socket_pdu_1, 'pdus'))
+        self.msg_connect((self.ieee802_11_mac_0, 'app out'), (self.network_socket_pdu_1_0, 'pdus'))
+        self.msg_connect((self.ieee802_11_mac_0, 'app out'), (self.network_socket_pdu_1_0_0, 'pdus'))
+        self.msg_connect((self.ieee802_11_mac_0, 'app out'), (self.network_socket_pdu_1_0_0_0, 'pdus'))
+        self.msg_connect((self.ieee802_11_mac_0, 'app out'), (self.network_socket_pdu_1_1, 'pdus'))
         self.msg_connect((self.ieee802_11_mac_0, 'phy out'), (self.wifi_phy_hier_0, 'mac_in'))
         self.msg_connect((self.network_socket_pdu_0, 'pdus'), (self.ieee802_11_mac_0, 'app in'))
+        self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.foo_wireshark_connector_0, 'in'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_mac_0, 'phy in'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_parse_mac_0, 'in'))
         self.msg_connect((self.wifi_phy_hier_0, 'carrier'), (self.pdu_pdu_to_tagged_stream_0, 'pdus'))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.foo_packet_pad2_0, 0))
-        self.connect((self.foo_packet_pad2_0, 0), (self.uhd_usrp_sink_0, 0))
+        self.connect((self.channels_channel_model_0, 0), (self.wifi_phy_hier_0, 0))
+        self.connect((self.foo_packet_pad2_0, 0), (self.channels_channel_model_0, 0))
+        self.connect((self.foo_wireshark_connector_0, 0), (self.blocks_file_sink_0, 0))
         self.connect((self.pdu_pdu_to_tagged_stream_0, 0), (self.qtgui_const_sink_x_0, 0))
-        self.connect((self.uhd_usrp_source_0, 0), (self.wifi_phy_hier_0, 0))
         self.connect((self.wifi_phy_hier_0, 0), (self.blocks_multiply_const_vxx_0, 0))
 
 
@@ -302,7 +294,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
     def set_tx_gain(self, tx_gain):
         self.tx_gain = tx_gain
-        self.uhd_usrp_sink_0.set_normalized_gain(self.tx_gain, 0)
 
     def get_samp_rate(self):
         return self.samp_rate
@@ -310,8 +301,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self._samp_rate_callback(self.samp_rate)
-        self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
-        self.uhd_usrp_source_0.set_samp_rate(self.samp_rate)
         self.wifi_phy_hier_0.set_bandwidth(self.samp_rate)
 
     def get_rx_gain(self):
@@ -319,7 +308,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
     def set_rx_gain(self, rx_gain):
         self.rx_gain = rx_gain
-        self.uhd_usrp_source_0.set_normalized_gain(self.rx_gain, 0)
 
     def get_lo_offset(self):
         return self.lo_offset
@@ -327,8 +315,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
     def set_lo_offset(self, lo_offset):
         self.lo_offset = lo_offset
         self._lo_offset_callback(self.lo_offset)
-        self.uhd_usrp_sink_0.set_center_freq(uhd.tune_request(self.freq, rf_freq = self.freq - self.lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
-        self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(self.freq, rf_freq = self.freq - self.lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
 
     def get_freq(self):
         return self.freq
@@ -336,8 +322,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
     def set_freq(self, freq):
         self.freq = freq
         self._freq_callback(self.freq)
-        self.uhd_usrp_sink_0.set_center_freq(uhd.tune_request(self.freq, rf_freq = self.freq - self.lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
-        self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(self.freq, rf_freq = self.freq - self.lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
         self.wifi_phy_hier_0.set_frequency(self.freq)
 
     def get_encoding(self):

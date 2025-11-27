@@ -1,127 +1,108 @@
-# V2V-Raft-SDR: 基于 SDR 的车联网 Raft 共识算法实现
+# V2V-Raft-SDR: 车联网环境下的 Raft 共识算法 SDR 实现
 
-## 📖 项目简介
+## 📖 项目简介 (Introduction)
 本项目旨在验证 **Wireless Distributed Consensus (无线分布式共识)** 理论在车联网 (V2V) 场景下的可行性。
 
-项目基于 **GNU Radio** 和 **ANTSDR U200 (AD9361)** 硬件平台，实现了 IEEE 802.11p (V2V) 通信协议栈。我们构建了一套“双模”开发环境，既支持纯软件层面的快速算法验证，也支持基于真实无线电信道的硬件实战。
+项目利用 **GNU Radio** 和 **SDR (软件无线电)** 技术构建了 IEEE 802.11p 通信物理层，并在此基础上实现了一个**完全去中心化**的 Raft 共识集群。系统支持“纯软件多节点仿真”和“硬件在环实战”两种模式，能够模拟车辆在真实无线信道中的 Leader 选举与共识过程。
 
-核心创新在于通过 SDR 底层接口提取信号质量 (RSSI/CSI) 信息，用于优化 Raft 共识算法的 Leader 选举机制。
+## 🌟 核心特性
+* **物理层仿真**: 基于 `gr-ieee802-11` 实现完整的 OFDM 物理层与 MAC 层处理。
+* **上帝视角信道**: 软件仿真模式下，通过 UDP 广播机制模拟无线电的“广播”特性，实现多节点组网。
+* **Raft 算法移植**: 实现了基于 UDP 的 Raft 状态机（Leader 选举、心跳维持、超时重选）。
+* **SDR 硬件接入**: 支持 MicroPhase ANTSDR U200 (AD9361) 硬件接入，在真实电磁环境中验证算法。
 
 ---
 
-## 📂 项目结构 (Project Structure)
+## 📂 文件说明 (File Structure)
 
-本项目精简了冗余依赖，核心代码位于 `scripts/` 目录下：
+核心代码位于 `scripts/` 目录下：
 
-```text
-scripts/
-├── wifi_phy_hier.py         # [核心] 物理层逻辑封装 (OFDM调制/解调/同步)，所有版本共用
-├── wifi_transceiver_hw.py   # [硬件版] 基站主程序，调用 UHD 驱动连接 SDR 硬件
-├── wifi_transceiver_sim.py  # [仿真版] 基站主程序，使用 Channel Model 模拟软件回环
-└── test.py                  # [应用层] 模拟车载终端，负责发送指令和运行 Raft 逻辑
-````
+| 文件名 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| **`v2v_sim_hub.py`** | 仿真基站 | (修改自 `wifi_transceiver.py`) **软件仿真核心**。它模拟了“空气”，监听 UDP 50000 端口，并将收到的信号广播给 50001-50005 端口的节点。 |
+| **`v2v_hw_phy.py`** | 硬件基站 | (修改自`wifi_transceiver.py`) **硬件实战核心**。调用 UHD 驱动连接 SDR 硬件，实现真实的射频收发。 |
+| **`raft_node.py`** | 节点逻辑 | Raft 算法实现。每个运行实例代表一辆车，具有独立的 ID、状态和超时计时器。 |
+| **`wifi_phy_hier.py`** | 依赖库 | GNU Radio 生成的物理层逻辑层级块，是上述两个基站程序的**硬性依赖**。 |
 
-### 端口映射 (UDP Port Map)
+---
 
-系统通过 UDP Socket 实现 Python 应用层与 GNU Radio 物理层的解耦：
+## 🚀 运行指南 (Quick Start)
 
-  * **上行 (Tx)**: Python -\> `UDP 12345` -\> GNU Radio (发射)
-  * **下行 (Rx)**: GNU Radio (接收) -\> `UDP 54321` -\> Python
+### 场景一：多节点软件仿真 (5节点集群)
+*无需硬件，在单机上模拟 5 辆车的共识过程。*
 
------
+**1. 启动虚拟信道 (The Air)**
+打开终端 1，运行仿真集线器：
+```bash
+python3 scripts/v2v_sim_hub.py
+```
 
-## 🛠️ 硬件环境 (Hardware Setup)
+此程序会建立 UDP 桥接，负责将任一节点的消息广播给其他所有节点。
 
-如果要运行硬件版 (`_hw.py`)，需要以下配置：
+**2. 启动 Raft 节点 (The Cars)** 
+请分别打开 5 个新的终端窗口，依次运行：
 
-  * **SDR 开发板**: MicroPhase ANTSDR U200
-      * **固件要求**: 需刷入适配 **UHD (USRP B205mini)** 的固件。
-      * **接口连接**: 使用 **USB 3.0** 接口（必须连接蓝色/红色 USB 口，否则带宽不足会报错）。
-  * **天线**:
-      * **TRX 接口**: 连接 5.8GHz 天线（负责发射/接收）。
-      * **RX 接口**: 连接 5.8GHz 天线（负责分集接收）。
+```bash
 
------
+# 终端 2 (节点 1)
+python3 scripts/raft_node.py --id 1
 
-## 🚀 快速开始 (Quick Start)
+# 终端 3 (节点 2)
+python3 scripts/raft_node.py --id 2
 
-### 模式一：纯软件仿真 (Simulation Mode)
+# ... 依次启动到节点 5
+python3 scripts/raft_node.py --id 5
+```
 
-*适用场景：无硬件环境、调试 Raft 算法逻辑、开发阶段。*
+**3. 预期现象**
 
-1.  **启动虚拟基站**：
+* 选举: 所有节点启动后，你会看到日志中出现 [超时] 发起选举!。
 
-    ```bash
-    python3 scripts/wifi_transceiver_sim.py
-    ```
+* 投票: 其他节点会打印 [投票] 投给了 -> 节点 X。
 
-    *注：此模式下信号通过软件模拟的信道回环，无物理信号发射。*
+* 当选: 获得多数票的节点会打印 👑 [当选] 我是 Leader! 并开始发送心跳。
 
-2.  **运行节点**：
-    新开一个终端运行：
+* 容灾: 尝试按 Ctrl+C 杀掉 Leader 进程，观察其他节点是否能在几秒内自动选出新 Leader。
 
-    ```bash
-    python3 scripts/test.py
-    ```
+### 场景二：硬件单机回环 (Loopback)
 
-### 模式二：硬件实战 (Hardware Mode)
+使用 ANTSDR U200 进行自发自收测试。
 
-*适用场景：实验室环境、验证真实信道性能、演示阶段。*
+连接硬件: 确保 SDR 连接至 USB 3.0 接口。
 
-1.  **检查设备**：
-    确保 SDR 已连接且识别为 USB 3.0 设备：
+启动硬件基站:
 
-    ```bash
-    lsusb -t  # 确认速度为 5000M
-    uhd_find_devices
-    ```
+```bash
+sudo python3 scripts/v2v_hw_phy.py
+```
 
-2.  **启动 SDR 基站**：
+(等待显示 Operating over USB 3)
 
-    ```bash
-    # 必须使用 sudo 以获取 USB 权限
-    sudo python3 scripts/wifi_transceiver_hw.py
-    ```
+运行测试应用:
+```bash
+python3 scripts/simple_test.py
+```
 
-    *等待终端显示 `Operating over USB 3` 且无报错退出。*
+⚙️ 环境依赖
 
-3.  **运行节点**：
-    新开一个终端运行：
+    OS: Ubuntu 20.04 / 22.04 LTS
 
-    ```bash
-    python3 scripts/test.py
-    ```
+    Python: 3.8+
 
-    *预期现象：SDR 板载 TX/RX 指示灯闪烁，Python 终端收到回显数据。*
+    SDR Driver: UHD 4.x (适配 B205mini 固件)
 
------
+    GNU Radio: 3.10 (推荐) 或 3.8
 
-## ⚠️ 常见问题 (Troubleshooting)
+    依赖模块: gr-ieee802-11, gr-foo
 
-### 1\. 硬件相关
+🗓️ 开发计划
 
-  * **报错 `Overflow (O)` 或 `Underflow (U)`**
-      * **原因**: USB 2.0 带宽不足 (480Mbps) 无法支撑 10MHz 采样率的全双工通信。
-      * **解决**: 务必使用 USB 3.0 数据线并连接电脑的 USB 3.0 接口。如果条件限制，可尝试减小 `samp_rate` 。
-  * **报错 `RuntimeError: No devices found`**
-      * **原因**: 缺少 UHD 固件或权限不足。
-      * **解决**: 运行 `sudo uhd_images_downloader` 下载固件，并确保使用 `sudo` 运行 Python。
+    [x] 完成物理层软件回环与硬件接入
 
-### 2\. 信号相关
+    [x] 实现基于 UDP 的多节点软件仿真架构
 
-  * **拔掉天线反而能收到数据？**
-      * **原因**: 自发自收时信号过强导致接收端饱和 (Saturation)。
-      * **解决**: 在代码中降低 `tx_gain` (建议 \< 0.5) 或拉开天线距离。
+    [x] 实现基础 Raft 选举逻辑
 
------
+    [ ] Next: 优化 Raft 逻辑，加入日志复制功能
 
-## 🗓️ 开发计划 (Roadmap)
-
-  - [x] **P0**: 环境搭建与 `gr-ieee802-11` 依赖编译
-  - [x] **P0**: 实现 UDP 接口替代 TAP 网卡，解耦网络栈
-  - [x] **P1**: 软件回环仿真 (Loopback) 跑通
-  - [x] **P1**: 硬件接入 (ANTSDR U200) 与带宽优化
-  - [ ] **P2**: 移植 Raft 算法 (将 TCP 通信重构为 UDP)
-  - [ ] **P3**: 实现 RSSI 信号强度提取与 Raft 权重整合
-
-<!-- end list -->
+    [ ] Next: 在 GNU Radio 中提取 RSSI (信号强度)，实现基于信号质量的加权选举
