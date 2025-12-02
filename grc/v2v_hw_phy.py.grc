@@ -356,7 +356,7 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     mtu: '10000'
-    port: '12345'
+    port: str(udp_recv_port)
     tcp_no_delay: 'False'
     type: UDP_SERVER
   states:
@@ -376,7 +376,7 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     mtu: '10000'
-    port: '54321'
+    port: str(udp_send_port)
     tcp_no_delay: 'False'
     type: UDP_CLIENT
   states:
@@ -513,6 +513,57 @@ blocks:
     coordinate: [208, 756.0]
     rotation: 0
     state: enabled
+- name: serial_num
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: SDR Serial
+    short_id: ''
+    type: str
+    value: '"U200100"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [48, 196.0]
+    rotation: 0
+    state: enabled
+- name: udp_recv_port
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: RX Port (Listen)
+    short_id: ''
+    type: intx
+    value: '10000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [152, 196.0]
+    rotation: 0
+    state: enabled
+- name: udp_send_port
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: TX Port (Send)
+    short_id: ''
+    type: intx
+    value: '20000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [272, 196.0]
+    rotation: 0
+    state: enabled
 - name: uhd_usrp_sink_0
   id: uhd_usrp_sink
   parameters:
@@ -624,7 +675,7 @@ blocks:
     clock_source6: ''
     clock_source7: ''
     comment: ''
-    dev_addr: ''
+    dev_addr: '"type=b200,serial=" + serial_num'
     dev_args: '""'
     gain0: tx_gain
     gain1: '0'
@@ -965,7 +1016,7 @@ blocks:
     dc_offs_enb7: default
     dc_offs_enb8: default
     dc_offs_enb9: default
-    dev_addr: ''
+    dev_addr: '"type=b200,serial=" + serial_num'
     dev_args: '""'
     gain0: rx_gain
     gain1: '0'

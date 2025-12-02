@@ -29,7 +29,7 @@ from gnuradio import gr, pdu
 from gnuradio import network
 from gnuradio import uhd
 import time
-from scripts.core.wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
+from wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
 import foo
 import ieee802_11
 import sip
@@ -38,7 +38,7 @@ import sip
 
 class wifi_transceiver(gr.top_block, Qt.QWidget):
 
-    def __init__(self):
+    def __init__(self, serial_num="U200100", udp_recv_port=10000, udp_send_port=20000):
         gr.top_block.__init__(self, "Wifi Transceiver", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Wifi Transceiver")
@@ -67,6 +67,13 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(geometry)
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
+
+        ##################################################
+        # Parameters
+        ##################################################
+        self.serial_num = serial_num
+        self.udp_recv_port = udp_recv_port
+        self.udp_send_port = udp_send_port
 
         ##################################################
         # Variables
@@ -195,7 +202,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             sensitivity=0.56,
         )
         self.uhd_usrp_source_0 = uhd.usrp_source(
-            ",".join(('', "")),
+            ",".join(("type=b200,serial=" + serial_num, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -208,7 +215,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
         self.uhd_usrp_source_0.set_normalized_gain(rx_gain, 0)
         self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            ",".join(('', "")),
+            ",".join(("type=b200,serial=" + serial_num, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -263,8 +270,8 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self._qtgui_const_sink_x_0_win = sip.wrapinstance(self.qtgui_const_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_const_sink_x_0_win)
         self.pdu_pdu_to_tagged_stream_0 = pdu.pdu_to_tagged_stream(gr.types.complex_t, 'packet_len')
-        self.network_socket_pdu_1 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', '54321', 10000, False)
-        self.network_socket_pdu_0 = network.socket_pdu('UDP_SERVER', '', '12345', 10000, False)
+        self.network_socket_pdu_1 = network.socket_pdu('UDP_CLIENT', '127.0.0.1', str(udp_send_port), 10000, False)
+        self.network_socket_pdu_0 = network.socket_pdu('UDP_SERVER', '', str(udp_recv_port), 10000, False)
         self.ieee802_11_parse_mac_0 = ieee802_11.parse_mac(False, True)
         self.ieee802_11_mac_0 = ieee802_11.mac([0x12, 0x34, 0x56, 0x78, 0x90, 0xab], [0x30, 0x14, 0x4a, 0xe6, 0x46, 0xe4], [0x42, 0x42, 0x42, 0x42, 0x42, 0x42])
         self.foo_packet_pad2_0 = foo.packet_pad2(False, False, 0.001, 10000, 10000)
@@ -296,6 +303,24 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.wait()
 
         event.accept()
+
+    def get_serial_num(self):
+        return self.serial_num
+
+    def set_serial_num(self, serial_num):
+        self.serial_num = serial_num
+
+    def get_udp_recv_port(self):
+        return self.udp_recv_port
+
+    def set_udp_recv_port(self, udp_recv_port):
+        self.udp_recv_port = udp_recv_port
+
+    def get_udp_send_port(self):
+        return self.udp_send_port
+
+    def set_udp_send_port(self, udp_send_port):
+        self.udp_send_port = udp_send_port
 
     def get_tx_gain(self):
         return self.tx_gain
@@ -358,12 +383,27 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
 
 
+def argument_parser():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--serial-num", dest="serial_num", type=str, default="U200100",
+        help="Set SDR Serial [default=%(default)r]")
+    parser.add_argument(
+        "--udp-recv-port", dest="udp_recv_port", type=intx, default=10000,
+        help="Set RX Port (Listen) [default=%(default)r]")
+    parser.add_argument(
+        "--udp-send-port", dest="udp_send_port", type=intx, default=20000,
+        help="Set TX Port (Send) [default=%(default)r]")
+    return parser
+
 
 def main(top_block_cls=wifi_transceiver, options=None):
+    if options is None:
+        options = argument_parser().parse_args()
 
     qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls()
+    tb = top_block_cls(serial_num=options.serial_num, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
 
     tb.start()
 
