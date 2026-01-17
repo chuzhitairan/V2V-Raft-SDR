@@ -6,25 +6,50 @@
 #
 # GNU Radio Python Flow Graph
 # Title: Wifi Transceiver
-# GNU Radio version: 3.10.9.2
+# GNU Radio version: 3.10.12.0
 
 from PyQt5 import Qt
 from gnuradio import qtgui
 import os
 import sys
-sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
+import logging as log
+
+def get_state_directory() -> str:
+    oldpath = os.path.expanduser("~/.grc_gnuradio")
+    try:
+        from gnuradio.gr import paths
+        newpath = paths.persistent()
+        if os.path.exists(newpath):
+            return newpath
+        if os.path.exists(oldpath):
+            log.warning(f"Found persistent state path '{newpath}', but file does not exist. " +
+                     f"Old default persistent state path '{oldpath}' exists; using that. " +
+                     "Please consider moving state to new location.")
+            return oldpath
+        # Default to the correct path if both are configured.
+        # neither old, nor new path exist: create new path, return that
+        os.makedirs(newpath, exist_ok=True)
+        return newpath
+    except (ImportError, NameError):
+        log.warning("Could not retrieve GNU Radio persistent state directory from GNU Radio. " +
+                 "Trying defaults.")
+        xdgstate = os.getenv("XDG_STATE_HOME", os.path.expanduser("~/.local/state"))
+        xdgcand = os.path.join(xdgstate, "gnuradio")
+        if os.path.exists(xdgcand):
+            return xdgcand
+        if os.path.exists(oldpath):
+            log.warning(f"Using legacy state path '{oldpath}'. Please consider moving state " +
+                     f"files to '{xdgcand}'.")
+            return oldpath
+        # neither old, nor new path exist: create new path, return that
+        os.makedirs(xdgcand, exist_ok=True)
+        return xdgcand
+
+sys.path.append(os.environ.get('GRC_HIER_PATH', get_state_directory()))
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import blocks
-from gnuradio import gr
-from gnuradio.filter import firdes
-from gnuradio.fft import window
-import signal
-from PyQt5 import Qt
-from argparse import ArgumentParser
-from gnuradio.eng_arg import eng_float, intx
-from gnuradio import eng_notation
 from gnuradio import gr, pdu
 from gnuradio import network
 from gnuradio import uhd
@@ -33,12 +58,22 @@ from wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
 import foo
 import ieee802_11
 import sip
+import threading
+from gnuradio import gr
+from gnuradio.filter import firdes
+from gnuradio.fft import window
+import sys
+import signal
+from argparse import ArgumentParser
+from gnuradio.eng_arg import eng_float, intx
+from gnuradio import eng_notation
+
 
 
 
 class wifi_transceiver(gr.top_block, Qt.QWidget):
 
-    def __init__(self, serial_num="U200100", udp_recv_port=10000, udp_send_port=20000):
+    def __init__(self, serial_num="addr=192.168.1.10", udp_recv_port=10000, udp_send_port=20000):
         gr.top_block.__init__(self, "Wifi Transceiver", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Wifi Transceiver")
@@ -59,7 +94,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "wifi_transceiver")
+        self.settings = Qt.QSettings("gnuradio/flowgraphs", "wifi_transceiver")
 
         try:
             geometry = self.settings.value("geometry")
@@ -67,6 +102,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(geometry)
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
+        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Parameters
@@ -201,32 +237,21 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             frequency=freq,
             sensitivity=0.56,
         )
-        # --- 修改开始 ---
-        if "addr" in serial_num:
-            # 如果参数里包含 addr，直接使用，不要加 serial= 前缀
-            source_dev_args = ",".join(("type=b200," + serial_num, ""))
-        else:
-            # 否则还是按老规矩，当作序列号处理
-            source_dev_args = ",".join(("type=b200,serial=" + serial_num, ""))
-
         self.uhd_usrp_source_0 = uhd.usrp_source(
-            source_dev_args,
+            ",".join((serial_num, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
                 channels=list(range(0,1)),
             ),
         )
-        # --- 修改结束 ---
         self.uhd_usrp_source_0.set_samp_rate(samp_rate)
         self.uhd_usrp_source_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
 
         self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
         self.uhd_usrp_source_0.set_normalized_gain(rx_gain, 0)
-        # --- 修改开始 ---
-        # 直接复用上面判断好的 source_dev_args 变量即可
         self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            source_dev_args,
+            ",".join((serial_num, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -234,7 +259,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             ),
             'packet_len',
         )
-        # --- 修改结束 ---
         self.uhd_usrp_sink_0.set_samp_rate(samp_rate)
         self.uhd_usrp_sink_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
 
@@ -309,7 +333,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "wifi_transceiver")
+        self.settings = Qt.QSettings("gnuradio/flowgraphs", "wifi_transceiver")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -398,8 +422,8 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument(
-        "--serial-num", dest="serial_num", type=str, default="U200100",
-        help="Set SDR Serial [default=%(default)r]")
+        "--serial-num", dest="serial_num", type=str, default="addr=192.168.1.10",
+        help="Set SDR Device Args [default=%(default)r]")
     parser.add_argument(
         "--udp-recv-port", dest="udp_recv_port", type=intx, default=10000,
         help="Set RX Port (Listen) [default=%(default)r]")
@@ -418,6 +442,7 @@ def main(top_block_cls=wifi_transceiver, options=None):
     tb = top_block_cls(serial_num=options.serial_num, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
 
     tb.start()
+    tb.flowgraph_started.set()
 
     tb.show()
 

@@ -1,29 +1,25 @@
 options:
   parameters:
+    alias: ''
     author: ''
     catch_exceptions: 'True'
-    category: Custom
-    cmake_opt: ''
     comment: ''
     copyright: ''
     description: ''
-    gen_cmake: 'On'
     gen_linking: dynamic
     generate_options: qt_gui
+    generator_class_name: PythonQtGuiGenerator
+    generator_module: gnuradio.grc.workflows.python_qt_gui
     hier_block_src_path: '.:'
     id: wifi_transceiver
     max_nouts: '0'
     output_language: python
-    placement: (0,0)
     qt_qss_theme: ''
     realtime_scheduling: ''
     run: 'True'
     run_command: '{python} -u {filename}'
-    run_options: prompt
-    sizing_mode: fixed
     thread_safe_setters: ''
     title: ''
-    window_size: (1000,1000)
   states:
     bus_sink: false
     bus_source: false
@@ -308,7 +304,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [616, 265]
+    coordinate: [616, 272.0]
     rotation: 0
     state: disabled
 - name: ieee802_11_mac_0
@@ -519,10 +515,10 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: SDR Serial
+    label: SDR Device Args
     short_id: ''
     type: str
-    value: '"U200100"'
+    value: '"addr=192.168.1.10"'
   states:
     bus_sink: false
     bus_source: false
@@ -675,7 +671,7 @@ blocks:
     clock_source6: ''
     clock_source7: ''
     comment: ''
-    dev_addr: '"type=b200,serial=" + serial_num'
+    dev_addr: serial_num
     dev_args: '""'
     gain0: tx_gain
     gain1: '0'
@@ -1016,7 +1012,7 @@ blocks:
     dc_offs_enb7: default
     dc_offs_enb8: default
     dc_offs_enb9: default
-    dev_addr: '"type=b200,serial=" + serial_num'
+    dev_addr: serial_num
     dev_args: '""'
     gain0: rx_gain
     gain1: '0'
@@ -1317,4 +1313,4 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.10.9.2
+  grc_version: 3.10.12.0
