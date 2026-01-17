@@ -157,6 +157,23 @@ using namespace boost::placeholders;
 
 
 
+* **文件 8**: `host/tests/tx_streamer_test.cpp`
+* **修改**：在头部 `#include` 列表末尾添加：
+```cpp
+#include <complex>
+
+```
+
+
+
+* **文件 9**: `host/include/uhd/types/eeprom.hpp`
+* **修改**：在头部 `#include` 列表末尾添加：
+```cpp
+#include <cstdint>
+
+```
+
+
 
 ---
 

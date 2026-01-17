@@ -201,21 +201,32 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             frequency=freq,
             sensitivity=0.56,
         )
+        # --- 修改开始 ---
+        if "addr" in serial_num:
+            # 如果参数里包含 addr，直接使用，不要加 serial= 前缀
+            source_dev_args = ",".join(("type=b200," + serial_num, ""))
+        else:
+            # 否则还是按老规矩，当作序列号处理
+            source_dev_args = ",".join(("type=b200,serial=" + serial_num, ""))
+
         self.uhd_usrp_source_0 = uhd.usrp_source(
-            ",".join(("type=b200,serial=" + serial_num, "")),
+            source_dev_args,
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
                 channels=list(range(0,1)),
             ),
         )
+        # --- 修改结束 ---
         self.uhd_usrp_source_0.set_samp_rate(samp_rate)
         self.uhd_usrp_source_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
 
         self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
         self.uhd_usrp_source_0.set_normalized_gain(rx_gain, 0)
+        # --- 修改开始 ---
+        # 直接复用上面判断好的 source_dev_args 变量即可
         self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            ",".join(("type=b200,serial=" + serial_num, "")),
+            source_dev_args,
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -223,6 +234,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             ),
             'packet_len',
         )
+        # --- 修改结束 ---
         self.uhd_usrp_sink_0.set_samp_rate(samp_rate)
         self.uhd_usrp_sink_0.set_time_now(uhd.time_spec(time.time()), uhd.ALL_MBOARDS)
 
