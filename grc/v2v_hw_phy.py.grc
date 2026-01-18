@@ -24,7 +24,7 @@ options:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [8, 12.0]
+    coordinate: [16, 12.0]
     rotation: 0
     state: enabled
 
@@ -268,8 +268,57 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [416.0, 608]
+    coordinate: [464.0, 576]
     rotation: 270
+    state: enabled
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Block: SNR Injector\n\"\"\"\n\nimport numpy\
+      \ as np\nfrom gnuradio import gr\nimport pmt\nimport json\n\nclass blk(gr.basic_block):\
+      \  # \u7C7B\u540D\u5FC5\u987B\u4FDD\u6301\u4E3A blk\n    def __init__(self):\n\
+      \        gr.basic_block.__init__(self,\n            name='SNR Injector',   #\
+      \ \u8FD9\u91CC\u662F\u5728 GRC \u754C\u9762\u4E0A\u663E\u793A\u7684\u540D\u5B57\
+      \n            in_sig=None,\n            out_sig=None)\n        \n        # \u6CE8\
+      \u518C\u6D88\u606F\u8F93\u5165\u548C\u8F93\u51FA\u7AEF\u53E3\n        self.message_port_register_in(pmt.intern('in'))\n\
+      \        self.message_port_register_out(pmt.intern('out'))\n        self.set_msg_handler(pmt.intern('in'),\
+      \ self.handle_msg)\n\n    def handle_msg(self, msg):\n        # msg \u662F\u4E00\
+      \u4E2A pair: (metadata, payload)\n        meta = pmt.car(msg)\n        payload\
+      \ = pmt.cdr(msg)\n        \n        # 1. \u5C1D\u8BD5\u4ECE metadata \u4E2D\u63D0\
+      \u53D6 SNR\n        # gr-ieee802-11 \u901A\u5E38\u4F1A\u5C06 SNR \u5B58\u50A8\
+      \u5728 'snr' \u5B57\u6BB5\n        current_snr = 0.0\n        try:\n       \
+      \     if pmt.dict_has_key(meta, pmt.intern(\"snr\")):\n                current_snr\
+      \ = pmt.to_double(pmt.dict_ref(meta, pmt.intern(\"snr\"), pmt.from_double(0.0)))\n\
+      \        except:\n            pass\n            \n        # 2. \u89E3\u6790\
+      \ Payload (\u5047\u8BBE\u662F JSON \u5B57\u7B26\u4E32)\n        try:\n     \
+      \       # \u5C06 u8vector \u8F6C\u4E3A bytes \u518D\u89E3\u7801\n          \
+      \  payload_bytes = bytes(pmt.u8vector_elements(payload))\n            json_str\
+      \ = payload_bytes.decode('utf-8')\n            \n            # 3. \u4FEE\u6539\
+      \ JSON\uFF0C\u6CE8\u5165 SNR\n            data = json.loads(json_str)\n    \
+      \        if 'phy_state' in data:\n                data['phy_state']['snr'] =\
+      \ current_snr\n            \n            # 4. \u91CD\u65B0\u6253\u5305\n   \
+      \         new_json_str = json.dumps(data)\n            new_payload_bytes = new_json_str.encode('utf-8')\n\
+      \            # \u5C06 bytes \u8F6C\u56DE u8vector\n            new_payload =\
+      \ pmt.init_u8vector(len(new_payload_bytes), list(new_payload_bytes))\n     \
+      \       \n            # \u751F\u6210\u65B0\u6D88\u606F\u5E76\u53D1\u9001\n \
+      \           new_msg = pmt.cons(meta, new_payload)\n            self.message_port_pub(pmt.intern('out'),\
+      \ new_msg)\n            \n        except Exception as e:\n            # \u5982\
+      \u679C\u89E3\u6790\u5931\u8D25\uFF08\u975E JSON \u6570\u636E\uFF09\uFF0C\u76F4\
+      \u63A5\u900F\u4F20\u539F\u6570\u636E\n            self.message_port_pub(pmt.intern('out'),\
+      \ msg)\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('SNR Injector', 'blk', [], [('in', 'message', 1)], [('out', 'message',
+      1)], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [920, 336.0]
+    rotation: 0
     state: enabled
 - name: foo_packet_pad2_0
   id: foo_packet_pad2
@@ -288,7 +337,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [600, 676.0]
+    coordinate: [608, 676.0]
     rotation: 0
     state: enabled
 - name: ieee802_11_ether_encap_0
@@ -304,7 +353,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [616, 272.0]
+    coordinate: [688, 264.0]
     rotation: 0
     state: disabled
 - name: ieee802_11_mac_0
@@ -322,7 +371,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [608, 379]
+    coordinate: [720, 372.0]
     rotation: 0
     state: enabled
 - name: ieee802_11_parse_mac_0
@@ -359,7 +408,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [456, 204.0]
+    coordinate: [464, 292.0]
     rotation: 0
     state: enabled
 - name: network_socket_pdu_1
@@ -379,7 +428,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [856, 204.0]
+    coordinate: [1096, 276.0]
     rotation: 0
     state: enabled
 - name: network_tuntap_pdu_0
@@ -397,7 +446,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [616, 164.0]
+    coordinate: [688, 164.0]
     rotation: 180
     state: disabled
 - name: pdu_pdu_to_tagged_stream_0
@@ -414,7 +463,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [124.0, 552]
+    coordinate: [208.0, 528]
     rotation: 270
     state: true
 - name: qtgui_const_sink_x_0
@@ -506,7 +555,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [208, 756.0]
+    coordinate: [336, 784.0]
     rotation: 0
     state: enabled
 - name: serial_num
@@ -523,7 +572,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [48, 196.0]
+    coordinate: [8, 196.0]
     rotation: 0
     state: enabled
 - name: udp_recv_port
@@ -557,7 +606,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [272, 196.0]
+    coordinate: [280, 196.0]
     rotation: 0
     state: enabled
 - name: uhd_usrp_sink_0
@@ -834,7 +883,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [840, 676.0]
+    coordinate: [952, 680.0]
     rotation: 0
     state: enabled
 - name: uhd_usrp_source_0
@@ -1270,7 +1319,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [936, 492.0]
+    coordinate: [1064, 448.0]
     rotation: 180
     state: enabled
 - name: wifi_phy_hier_0
@@ -1290,16 +1339,17 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [592, 492.0]
+    coordinate: [712, 492.0]
     rotation: 180
     state: enabled
 
 connections:
 - [blocks_multiply_const_vxx_0, '0', foo_packet_pad2_0, '0']
+- [epy_block_0, out, network_socket_pdu_1, pdus]
 - [foo_packet_pad2_0, '0', uhd_usrp_sink_0, '0']
 - [ieee802_11_ether_encap_0, to tap, network_tuntap_pdu_0, pdus]
 - [ieee802_11_ether_encap_0, to wifi, ieee802_11_mac_0, app in]
-- [ieee802_11_mac_0, app out, network_socket_pdu_1, pdus]
+- [ieee802_11_mac_0, app out, epy_block_0, in]
 - [ieee802_11_mac_0, phy out, wifi_phy_hier_0, mac_in]
 - [network_socket_pdu_0, pdus, ieee802_11_mac_0, app in]
 - [network_tuntap_pdu_0, pdus, ieee802_11_ether_encap_0, from tap]
