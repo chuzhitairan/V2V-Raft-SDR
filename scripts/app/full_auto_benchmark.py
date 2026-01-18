@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 全自动基准测试脚本 (Full Auto Benchmark)
 ========================================

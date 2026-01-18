@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 轻量级仿真集线器 (Sim Hub Lite)
 --------------------------------

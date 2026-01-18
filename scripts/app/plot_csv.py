@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 从 CSV 文件绘制 Benchmark 图表
 
