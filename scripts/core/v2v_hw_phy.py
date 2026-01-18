@@ -47,13 +47,14 @@ def get_state_directory() -> str:
 
 sys.path.append(os.environ.get('GRC_HIER_PATH', get_state_directory()))
 
-from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import blocks
 from gnuradio import gr, pdu
 from gnuradio import network
 from gnuradio import uhd
 import time
+import socket
+import json
 from wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
 import foo
 import ieee802_11
@@ -74,7 +75,7 @@ from gnuradio import eng_notation
 
 class wifi_transceiver(gr.top_block, Qt.QWidget):
 
-    def __init__(self, serial_num="addr=192.168.1.10", udp_recv_port=10000, udp_send_port=20000):
+    def __init__(self, rx_gain=0.75, serial_num="addr=192.168.1.10", tx_gain=0.75, udp_recv_port=10000, udp_send_port=20000):
         gr.top_block.__init__(self, "Wifi Transceiver", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Wifi Transceiver")
@@ -108,16 +109,16 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         ##################################################
         # Parameters
         ##################################################
+        self.rx_gain = rx_gain
         self.serial_num = serial_num
+        self.tx_gain = tx_gain
         self.udp_recv_port = udp_recv_port
         self.udp_send_port = udp_send_port
 
         ##################################################
         # Variables
         ##################################################
-        self.tx_gain = tx_gain = 0.75
         self.samp_rate = samp_rate = 5e6
-        self.rx_gain = rx_gain = 0.75
         self.lo_offset = lo_offset = 0
         self.freq = freq = 5890000000
         self.encoding = encoding = 0
@@ -127,9 +128,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         # Blocks
         ##################################################
 
-        self._tx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
-        self._tx_gain_win = qtgui.RangeWidget(self._tx_gain_range, self.set_tx_gain, "'tx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._tx_gain_win)
         # Create the options list
         self._samp_rate_options = [5000000.0, 10000000.0, 20000000.0]
         # Create the labels list
@@ -146,9 +144,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             lambda i: self.set_samp_rate(self._samp_rate_options[i]))
         # Create the radio buttons
         self.top_layout.addWidget(self._samp_rate_tool_bar)
-        self._rx_gain_range = qtgui.Range(0, 1, 0.01, 0.75, 200)
-        self._rx_gain_win = qtgui.RangeWidget(self._rx_gain_range, self.set_rx_gain, "'rx_gain'", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._rx_gain_win)
         # Create the options list
         self._lo_offset_options = [0, 6000000.0, 11000000.0]
         # Create the labels list
@@ -343,11 +338,25 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
         event.accept()
 
+    def get_rx_gain(self):
+        return self.rx_gain
+
+    def set_rx_gain(self, rx_gain):
+        self.rx_gain = rx_gain
+        self.uhd_usrp_source_0.set_normalized_gain(self.rx_gain, 0)
+
     def get_serial_num(self):
         return self.serial_num
 
     def set_serial_num(self, serial_num):
         self.serial_num = serial_num
+
+    def get_tx_gain(self):
+        return self.tx_gain
+
+    def set_tx_gain(self, tx_gain):
+        self.tx_gain = tx_gain
+        self.uhd_usrp_sink_0.set_normalized_gain(self.tx_gain, 0)
 
     def get_udp_recv_port(self):
         return self.udp_recv_port
@@ -361,13 +370,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
     def set_udp_send_port(self, udp_send_port):
         self.udp_send_port = udp_send_port
 
-    def get_tx_gain(self):
-        return self.tx_gain
-
-    def set_tx_gain(self, tx_gain):
-        self.tx_gain = tx_gain
-        self.uhd_usrp_sink_0.set_normalized_gain(self.tx_gain, 0)
-
     def get_samp_rate(self):
         return self.samp_rate
 
@@ -377,13 +379,6 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
         self.uhd_usrp_source_0.set_samp_rate(self.samp_rate)
         self.wifi_phy_hier_0.set_bandwidth(self.samp_rate)
-
-    def get_rx_gain(self):
-        return self.rx_gain
-
-    def set_rx_gain(self, rx_gain):
-        self.rx_gain = rx_gain
-        self.uhd_usrp_source_0.set_normalized_gain(self.rx_gain, 0)
 
     def get_lo_offset(self):
         return self.lo_offset
@@ -425,15 +420,90 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument(
+        "--rx-gain", dest="rx_gain", type=eng_float, default=eng_notation.num_to_str(float(0.75)),
+        help="Set RX Gain [default=%(default)r]")
+    parser.add_argument(
         "--serial-num", dest="serial_num", type=str, default="addr=192.168.1.10",
         help="Set SDR Device Args [default=%(default)r]")
+    parser.add_argument(
+        "--tx-gain", dest="tx_gain", type=eng_float, default=eng_notation.num_to_str(float(0.75)),
+        help="Set TX Gain [default=%(default)r]")
     parser.add_argument(
         "--udp-recv-port", dest="udp_recv_port", type=intx, default=10000,
         help="Set RX Port (Listen) [default=%(default)r]")
     parser.add_argument(
         "--udp-send-port", dest="udp_send_port", type=intx, default=20000,
         help="Set TX Port (Send) [default=%(default)r]")
+    parser.add_argument(
+        "--ctrl-port", dest="ctrl_port", type=intx, default=9999,
+        help="Control port for dynamic gain adjustment [default=%(default)r]")
     return parser
+
+
+def run_control_server(tb, port):
+    """
+    UDP 控制服务器 - 支持运行时动态调整增益
+    
+    协议 (JSON):
+        {"cmd": "set_tx_gain", "value": 0.5}
+        {"cmd": "set_rx_gain", "value": 0.5}
+        {"cmd": "get_gains"}
+        {"cmd": "ping"}
+    
+    响应:
+        {"status": "ok", "tx_gain": 0.5, "rx_gain": 0.5}
+        {"status": "error", "msg": "..."}
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('127.0.0.1', port))
+    sock.settimeout(1.0)
+    
+    print(f"🎛️  控制服务器启动: 端口 {port}")
+    print(f"   支持命令: set_tx_gain, set_rx_gain, get_gains, ping")
+    
+    while True:
+        try:
+            data, addr = sock.recvfrom(1024)
+            try:
+                cmd = json.loads(data.decode('utf-8'))
+                response = {"status": "ok"}
+                
+                if cmd.get('cmd') == 'set_tx_gain':
+                    value = float(cmd.get('value', 0.5))
+                    value = max(0.0, min(1.0, value))  # 限制范围
+                    tb.set_tx_gain(value)
+                    response['tx_gain'] = value
+                    print(f"🔧 TX Gain -> {value}")
+                    
+                elif cmd.get('cmd') == 'set_rx_gain':
+                    value = float(cmd.get('value', 0.5))
+                    value = max(0.0, min(1.0, value))
+                    tb.set_rx_gain(value)
+                    response['rx_gain'] = value
+                    print(f"🔧 RX Gain -> {value}")
+                    
+                elif cmd.get('cmd') == 'get_gains':
+                    response['tx_gain'] = tb.get_tx_gain()
+                    response['rx_gain'] = tb.get_rx_gain()
+                    
+                elif cmd.get('cmd') == 'ping':
+                    response['msg'] = 'pong'
+                    
+                else:
+                    response = {"status": "error", "msg": "Unknown command"}
+                
+                sock.sendto(json.dumps(response).encode(), addr)
+                
+            except Exception as e:
+                error_resp = {"status": "error", "msg": str(e)}
+                sock.sendto(json.dumps(error_resp).encode(), addr)
+                
+        except socket.timeout:
+            continue
+        except Exception as e:
+            print(f"控制服务器错误: {e}")
+            break
 
 
 def main(top_block_cls=wifi_transceiver, options=None):
@@ -442,10 +512,18 @@ def main(top_block_cls=wifi_transceiver, options=None):
 
     qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls(serial_num=options.serial_num, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
+    tb = top_block_cls(rx_gain=options.rx_gain, serial_num=options.serial_num, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
 
     tb.start()
     tb.flowgraph_started.set()
+    
+    # 启动控制服务器线程
+    ctrl_thread = threading.Thread(
+        target=run_control_server, 
+        args=(tb, options.ctrl_port),
+        daemon=True
+    )
+    ctrl_thread.start()
 
     tb.show()
 

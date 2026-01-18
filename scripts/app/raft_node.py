@@ -3,48 +3,49 @@ import time
 import random
 import json
 import argparse
+import threading
+from collections import deque
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional
 
 # --- 全局配置 ---
+# 注意：在真实多机组网时，如果使用广播，通常设为 '<broadcast>' 或组播地址
+# 但由于我们是用 SDR 的 P2P/广播 链路，SDR 脚本会帮我们广播
+# 所以这里发给本地 SDR 监听端口 (127.0.0.1) 是对的
 BROADCAST_IP = "127.0.0.1"
 
 # ==========================================
-# 1. 数据结构定义 (对应 RUBICONe 论文协议)
+# 1. 数据结构定义
 # ==========================================
 
 @dataclass
 class PhyState:
-    """
-    车辆物理状态 (论文核心: State Initialization)
-    包含: 位置(pos), 速度(vel), 信道质量(snr)
-    """
-    pos: List[float] = field(default_factory=lambda: [0.0, 0.0]) # [x, y]
-    vel: List[float] = field(default_factory=lambda: [0.0, 0.0]) # [vx, vy]
-    snr: float = 0.0 # 信噪比/信号强度 (用于公式计算)
+    """车辆物理状态 & 信道状态"""
+    pos: List[float] = field(default_factory=lambda: [0.0, 0.0])
+    vel: List[float] = field(default_factory=lambda: [0.0, 0.0])
+    snr: float = 0.0
 
 @dataclass
 class LogEntry:
     term: int
+    index: int
     command: str
     timestamp: float = field(default_factory=time.time)
 
 @dataclass
 class RaftMessage:
-    """Raft 消息协议封装"""
-    type: str       # "RequestVote", "VoteResponse", "Heartbeat"
+    type: str 
     term: int
     sender_id: int
-    phy_state: PhyState  # [扩展] 携带物理层状态
-    
-    # 标准 Raft 字段
     prev_log_index: int = 0
     prev_log_term: int = 0
     entries: List[LogEntry] = field(default_factory=list)
     leader_commit: int = 0
-    
-    # 投票专用
+    last_log_index: int = 0
+    last_log_term: int = 0
+    success: bool = False
     vote_granted: bool = False
+    phy_state: PhyState = field(default_factory=PhyState)
 
     def to_json(self):
         return json.dumps(asdict(self))
@@ -58,64 +59,11 @@ class RaftMessage:
             if 'entries' in data:
                 data['entries'] = [LogEntry(**e) for e in data['entries']]
             return RaftMessage(**data)
-        except Exception as e:
-            print(f"[解析错误] {e}")
+        except Exception:
             return None
 
 # ==========================================
-# 2. 核心功能模块
-# ==========================================
-
-class NodeState:
-    """管理本车状态"""
-    def __init__(self, node_id):
-        self.node_id = node_id
-        # 模拟初始状态 (实际应接入 GPS/IMU 传感器)
-        self.phy = PhyState(pos=[node_id * 10.0, 0.0], vel=[15.0, 0.0]) 
-
-    def update_simulation(self):
-        """模拟车辆移动"""
-        dt = 0.01
-        self.phy.pos[0] += self.phy.vel[0] * dt
-        # 这里预留接口：从 SDR 接收端读取真实的 SNR 值填入 self.phy.snr
-
-    def get_state(self):
-        return self.phy
-
-class PeerManager:
-    """邻居管理表 (用于计算网络密度和动态超时)"""
-    def __init__(self):
-        # 结构: {node_id: {'last_seen': time, 'phy_state': PhyState}}
-        self.peers: Dict[int, Dict] = {} 
-        self.cleanup_timeout = 10.0 # 10秒没消息视为掉线
-
-    def update_peer(self, node_id, phy_state):
-        self.peers[node_id] = {
-            'last_seen': time.time(),
-            'phy_state': phy_state
-        }
-
-    def get_active_count(self):
-        self._cleanup()
-        return len(self.peers)
-
-    def get_avg_snr(self):
-        """获取平均信道质量 (对应论文公式中的 gamma)"""
-        if not self.peers:
-            return 1.0 # 默认值
-        # 这里暂时用对方发来的 SNR 代替链路质量
-        total = sum(p['phy_state'].snr for p in self.peers.values())
-        return total / len(self.peers) if len(self.peers) > 0 else 1.0
-
-    def _cleanup(self):
-        now = time.time()
-        # 移除超时的邻居
-        expired = [nid for nid, info in self.peers.items() if now - info['last_seen'] > self.cleanup_timeout]
-        for nid in expired:
-            del self.peers[nid]
-
-# ==========================================
-# 3. Raft 主逻辑类
+# 2. 核心功能模块: 节点逻辑
 # ==========================================
 
 class RaftNode:
@@ -125,212 +73,436 @@ class RaftNode:
 
     def __init__(self, node_id, total_nodes, tx_port, rx_port):
         self.node_id = node_id
-        self.total_nodes = total_nodes # 用于判断多数派
+        self.total_nodes = total_nodes
         self.tx_port = tx_port
         self.rx_port = rx_port
         
-        # 模块初始化
-        self.vehicle = NodeState(node_id)
-        self.peers = PeerManager()
-        
-        # 网络初始化 (非阻塞 UDP)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind((BROADCAST_IP, self.rx_port))
-        self.sock.setblocking(False)
-
-        # Raft 核心数据
-        self.state = self.STATE_FOLLOWER
+        # Raft Persistent State (应持久化，目前仅内存)
         self.current_term = 0
         self.voted_for = None
-        self.votes_received = set()
+        self.log: List[LogEntry] = []
         
-        # 计时器
-        self.last_heartbeat_rx = time.time()
-        self.last_heartbeat_tx = time.time()
+        # Raft Volatile State
+        self.commit_index = 0
+        self.last_applied = 0
+        self.state = self.STATE_FOLLOWER
+        self.votes_received = 0  # 🔧 初始化，避免 AttributeError
+        self.current_leader = None
         
-        # RUBICONe 参数
-        self.T_base = 3.0
-        self.alpha = 0.5
-        self.election_timeout = self._calc_adaptive_timeout()
+        # Leader Volatile State (仅 Leader 使用)
+        self.next_index = {}   # 每个节点的下一条日志索引
+        self.match_index = {}  # 每个节点已复制的最高日志索引
+        
+        # RUBICONe State
+        self.peers = {} 
+        self.snr_window_size = 5 
+        
+        # System
+        self.lock = threading.RLock()
+        self.last_heartbeat_time = time.time()  # 🔧 重命名，语义更清晰
+        self.last_heartbeat_sent = time.time()  # 🔧 Leader 发送心跳时间
+        self.running = True
+        
+        # Params
+        self.T_base = 3.0       
+        self.alpha = 50.0       
         self.heartbeat_interval = 1.0
-
-        print(f"🚗 [节点 {self.node_id}] 启动! 监听: {self.rx_port} -> 发送: {self.tx_port}")
-
-    def _calc_adaptive_timeout(self):
-        """
-        [论文核心] 自适应超时计算
-        公式 (2): T = (1 + alpha / sum(gamma)) * T_base
-        """
-        # 1. 获取邻居信号质量总和 (目前用平均值模拟)
-        # 实际部署时，这里需要从物理层获取真实的 RSSI/SNR
-        gamma = self.peers.get_avg_snr() * max(1, self.peers.get_active_count())
         
-        if gamma <= 0.1: gamma = 0.1 # 防止除零
+        # Network
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((BROADCAST_IP, self.rx_port))
         
-        # 2. 计算动态因子
-        factor = 1.0 + (self.alpha / gamma)
-        
-        # 3. 增加随机抖动防止选票瓜分
-        timeout = (factor * self.T_base) + random.uniform(0.0, 1.0)
-        return timeout
+        print(f"🚗 [节点 {self.node_id}] 就绪 | 监听: {self.rx_port} -> 发送: {self.tx_port}")
 
-    def send_packet(self, msg: RaftMessage):
-        try:
-            data = msg.to_json().encode('utf-8')
-            self.sock.sendto(data, (BROADCAST_IP, self.tx_port))
-        except Exception as e:
-            print(f"发送错误: {e}")
+    def _update_peer_state(self, sender_id, phy_state):
+        with self.lock:
+            if sender_id not in self.peers:
+                self.peers[sender_id] = {
+                    'snr_history': deque(maxlen=self.snr_window_size),
+                    'last_seen': time.time()
+                }
+            if phy_state.snr != 0: 
+                self.peers[sender_id]['snr_history'].append(phy_state.snr)
+            self.peers[sender_id]['last_seen'] = time.time()
 
-    # --- 状态转换 ---
+    def _calculate_election_timeout(self):
+        """RUBICONe 自适应超时算法"""
+        with self.lock:
+            total_gamma = 0.0
+            active_peers = 0
+            now = time.time()
+            
+            for _, info in self.peers.items():
+                if now - info['last_seen'] < 10.0 and len(info['snr_history']) > 0:
+                    avg_snr = sum(info['snr_history']) / len(info['snr_history'])
+                    total_gamma += avg_snr
+                    active_peers += 1
+            
+            # [保留逻辑] 孤立节点使用标准超时，避免无限等待
+            if active_peers == 0:
+                factor = 1.0 
+            else:
+                if total_gamma < 1.0: total_gamma = 1.0
+                factor = 1.0 + (self.alpha / total_gamma)
+            
+            jitter = random.uniform(0.1, 0.2) * self.T_base
+            timeout = (factor * self.T_base) + jitter
+            
+            # [调试] 如果想看算法细节，可以取消注释
+            # print(f"[Timer] Peers={active_peers} | Gamma={total_gamma:.1f} | Timeout={timeout:.2f}s")
+            return timeout
+
+    def _get_last_log_index_and_term(self):
+        if len(self.log) > 0:
+            return len(self.log), self.log[-1].term
+        return 0, 0
+
+    def _step_down(self, new_term):
+        """发现更高 term 时降级为 Follower"""
+        self.current_term = new_term
+        self.state = self.STATE_FOLLOWER
+        self.voted_for = None
+        self.votes_received = 0
+        self.current_leader = None
 
     def start_election(self):
-        print(f"🔥 [超时] 发起选举 (Term {self.current_term + 1}, Timeout={self.election_timeout:.2f}s)")
-        self.state = self.STATE_CANDIDATE
-        self.current_term += 1
-        self.voted_for = self.node_id
-        self.votes_received = {self.node_id}
-        self.last_heartbeat_rx = time.time()
-
-
-        # =========== [关键修复] 开始 ===========
-        # 给自己投完票后，立即检查是否已经赢得选举
-        # 对于 total=1 的情况，1 > 0.5 成立，立即当选
-        if len(self.votes_received) > self.total_nodes / 2:
-            self.become_leader()
-        # =========== [关键修复] 结束 ===========
-        
-        # 构造并广播 RequestVote
-        msg = RaftMessage(
-            type="RequestVote",
-            term=self.current_term,
-            sender_id=self.node_id,
-            phy_state=self.vehicle.get_state()
-        )
-        self.send_packet(msg)
-        
-        # 重置超时 (应用动态算法)
-        self.election_timeout = self._calc_adaptive_timeout()
-
-    def become_leader(self):
-        if self.state != self.STATE_LEADER:
-            print(f"👑 [当选] 我是 Leader (Term {self.current_term})")
-            self.state = self.STATE_LEADER
-            self.send_heartbeat()
-
-    def send_heartbeat(self):
-        msg = RaftMessage(
-            type="Heartbeat",
-            term=self.current_term,
-            sender_id=self.node_id,
-            phy_state=self.vehicle.get_state()
-        )
-        self.send_packet(msg)
-        self.last_heartbeat_tx = time.time()
-
-    # --- 消息处理 ---
-
-    def handle_message(self, msg: RaftMessage):
-        # 1. 更新邻居信息 (用于计算网络拓扑)
-        self.peers.update_peer(msg.sender_id, msg.phy_state)
-
-        # 2. Term 更新机制
-        if msg.term > self.current_term:
-            print(f"   [Term更新] {self.current_term} -> {msg.term} (Follower)")
-            self.current_term = msg.term
-            self.state = self.STATE_FOLLOWER
-            self.voted_for = None
-        
-        # 3. 消息分发
-        if msg.type == "RequestVote":
-            self._on_request_vote(msg)
-        elif msg.type == "VoteResponse":
-            self._on_vote_response(msg)
-        elif msg.type == "Heartbeat":
-            self._on_heartbeat(msg)
-
-    def _on_request_vote(self, msg: RaftMessage):
-        if msg.term >= self.current_term and (self.voted_for is None or self.voted_for == msg.sender_id):
-            self.voted_for = msg.sender_id
-            self.last_heartbeat_rx = time.time()
+        with self.lock:
+            self.state = self.STATE_CANDIDATE
+            self.current_term += 1
+            self.voted_for = self.node_id
+            self.votes_received = 1  # 投给自己
+            self.current_leader = None
+            self.last_heartbeat_time = time.time()
             
-            # 同意投票
+            last_idx, last_term = self._get_last_log_index_and_term()
+            print(f"🔥 [选举] 发起 Term {self.current_term} (Timeout={self._calculate_election_timeout():.2f}s)")
+            
+            msg = RaftMessage(
+                type="RequestVote",
+                term=self.current_term,
+                sender_id=self.node_id,
+                last_log_index=last_idx,
+                last_log_term=last_term
+            )
+            self._broadcast(msg)
+            
+            # 单节点集群可直接当选
+            if self.votes_received > self.total_nodes / 2:
+                self.become_leader()
+
+    def handle_request_vote(self, msg: RaftMessage):
+        with self.lock:
             reply = RaftMessage(
                 type="VoteResponse",
                 term=self.current_term,
                 sender_id=self.node_id,
-                phy_state=self.vehicle.get_state(),
-                vote_granted=True
+                vote_granted=False
             )
-            self.send_packet(reply)
-            print(f"   [投票] 投给 -> 节点 {msg.sender_id}")
 
-    def _on_vote_response(self, msg: RaftMessage):
-        if self.state == self.STATE_CANDIDATE and msg.vote_granted:
-            self.votes_received.add(msg.sender_id)
-            print(f"   [得票] +1 (当前 {len(self.votes_received)}/{self.total_nodes})")
-            if len(self.votes_received) > self.total_nodes / 2:
-                self.become_leader()
+            # 旧 term 的请求直接拒绝
+            if msg.term < self.current_term:
+                self._send(reply)
+                return
 
-    def _on_heartbeat(self, msg: RaftMessage):
-        if msg.term >= self.current_term:
+            # 发现更高 term，降级
+            if msg.term > self.current_term:
+                self._step_down(msg.term)
+            
+            # 日志完整性检查
+            my_last_idx, my_last_term = self._get_last_log_index_and_term()
+            log_is_ok = (msg.last_log_term > my_last_term) or \
+                        (msg.last_log_term == my_last_term and msg.last_log_index >= my_last_idx)
+
+            if (self.voted_for is None or self.voted_for == msg.sender_id) and log_is_ok:
+                self.voted_for = msg.sender_id
+                self.last_heartbeat_time = time.time()  # 重置选举超时
+                reply.vote_granted = True
+                reply.term = self.current_term
+                print(f"✅ [投票] 同意 -> 节点 {msg.sender_id}")
+            
+            self._send(reply)
+
+    def handle_append_entries(self, msg: RaftMessage):
+        with self.lock:
+            reply = RaftMessage(
+                type="AppendEntriesResponse",
+                term=self.current_term,
+                sender_id=self.node_id,
+                success=False,
+                last_log_index=len(self.log)  # 告知 Leader 当前日志长度
+            )
+            
+            # 旧 term 的请求直接拒绝
+            if msg.term < self.current_term:
+                self._send(reply)
+                return
+            
+            # 发现合法 Leader，更新状态
+            if self.state != self.STATE_FOLLOWER:
+                print(f"⬇️ [降级] 发现 Leader {msg.sender_id}，转为 Follower")
+            
+            self._step_down(msg.term) if msg.term > self.current_term else None
             self.state = self.STATE_FOLLOWER
-            self.last_heartbeat_rx = time.time()
-            # print(f"   [心跳] 来自 Leader {msg.sender_id}")
+            self.current_term = msg.term
+            self.current_leader = msg.sender_id
+            self.last_heartbeat_time = time.time()
+            
+            # 🔧 日志一致性检查
+            if msg.prev_log_index > 0:
+                if len(self.log) < msg.prev_log_index:
+                    # 日志太短，无法匹配
+                    self._send(reply)
+                    return
+                if msg.prev_log_index > 0 and self.log[msg.prev_log_index - 1].term != msg.prev_log_term:
+                    # term 不匹配，删除冲突条目
+                    self.log = self.log[:msg.prev_log_index - 1]
+                    self._send(reply)
+                    return
+            
+            # 追加新日志
+            if msg.entries:
+                # 删除冲突的旧条目，追加新条目
+                self.log = self.log[:msg.prev_log_index] + msg.entries
+                print(f"📥 [日志] 收到 {len(msg.entries)} 条指令，当前日志长度: {len(self.log)}")
+            
+            reply.success = True
+            reply.last_log_index = len(self.log)
 
-    # --- 主循环 ---
+            # 更新 commit_index
+            if msg.leader_commit > self.commit_index:
+                self.commit_index = min(msg.leader_commit, len(self.log))
+                self._apply_committed_entries()
+            
+            self._send(reply)
+    
+    def _apply_committed_entries(self):
+        """应用已提交的日志到状态机"""
+        while self.last_applied < self.commit_index:
+            self.last_applied += 1
+            entry = self.log[self.last_applied - 1]
+            print(f"✨ [执行] 共识达成! 执行操作: {entry.command}")
 
-    def run_loop(self):
-        while True:
-            # 1. 接收网络数据 (非阻塞)
+    def become_leader(self):
+        with self.lock:
+            if self.state != self.STATE_LEADER:
+                self.state = self.STATE_LEADER
+                self.current_leader = self.node_id
+                
+                # 初始化 Leader 状态 (Raft 论文要求)
+                last_log_idx = len(self.log)
+                for i in range(1, self.total_nodes + 1):
+                    if i != self.node_id:
+                        self.next_index[i] = last_log_idx + 1
+                        self.match_index[i] = 0
+                
+                print(f"👑 [当选] 成为 Leader (Term {self.current_term})")
+                self._send_heartbeat()
+    
+    def propose_command(self, command: str):
+        """🔧 新增: Leader 提交新命令"""
+        with self.lock:
+            if self.state != self.STATE_LEADER:
+                print(f"❌ [拒绝] 非 Leader 无法提交命令，当前 Leader: {self.current_leader}")
+                return False
+            
+            entry = LogEntry(
+                term=self.current_term,
+                index=len(self.log) + 1,
+                command=command
+            )
+            self.log.append(entry)
+            print(f"📝 [提交] 新日志 #{entry.index}: {command}")
+            
+            # 立即发送 AppendEntries 复制日志
+            self._replicate_log()
+            return True
+    
+    def _replicate_log(self):
+        """Leader 向所有 Follower 复制日志 (广播模式: 只发一次)"""
+        # 🔧 修复: 广播模式下只需发送一次，不要对每个 peer 都广播
+        last_idx, last_term = self._get_last_log_index_and_term()
+        
+        # 计算需要发送的日志条目 (从最小的 next_index 开始)
+        min_next = min(self.next_index.values()) if self.next_index else len(self.log) + 1
+        prev_idx = min_next - 1
+        prev_term = self.log[prev_idx - 1].term if prev_idx > 0 and prev_idx <= len(self.log) else 0
+        entries = self.log[prev_idx:] if prev_idx < len(self.log) else []
+        
+        msg = RaftMessage(
+            type="AppendEntries",
+            term=self.current_term,
+            sender_id=self.node_id,
+            prev_log_index=prev_idx,
+            prev_log_term=prev_term,
+            leader_commit=self.commit_index,
+            entries=entries
+        )
+        self._broadcast(msg)
+    
+    def _send_append_entries_to(self, peer_id):
+        """向特定节点发送 AppendEntries (保留用于单播场景)"""
+        next_idx = self.next_index.get(peer_id, len(self.log) + 1)
+        prev_idx = next_idx - 1
+        prev_term = self.log[prev_idx - 1].term if prev_idx > 0 and prev_idx <= len(self.log) else 0
+        
+        # 获取需要发送的日志条目
+        entries = self.log[prev_idx:] if prev_idx < len(self.log) else []
+        
+        msg = RaftMessage(
+            type="AppendEntries",
+            term=self.current_term,
+            sender_id=self.node_id,
+            prev_log_index=prev_idx,
+            prev_log_term=prev_term,
+            leader_commit=self.commit_index,
+            entries=entries
+        )
+        self._broadcast(msg)  # 广播模式下无法单播，仍用广播
+
+    def _send_heartbeat(self):
+        last_idx, last_term = self._get_last_log_index_and_term()
+        msg = RaftMessage(
+            type="AppendEntries",
+            term=self.current_term,
+            sender_id=self.node_id,
+            prev_log_index=last_idx,
+            prev_log_term=last_term,
+            leader_commit=self.commit_index,
+            entries=[] 
+        )
+        # 移除刷屏日志
+        self._broadcast(msg)
+
+    def _broadcast(self, msg: RaftMessage):
+        try:
+            data = msg.to_json().encode('utf-8')
+            self.sock.sendto(data, (BROADCAST_IP, self.tx_port))
+        except Exception as e:
+            print(f"❌ 发送失败: {e}")
+
+    def _send(self, msg: RaftMessage):
+        self._broadcast(msg)
+
+    def recv_loop(self):
+        """网络接收线程"""
+        print("🔵 网络接收线程启动...")
+        while self.running:
             try:
                 data, _ = self.sock.recvfrom(4096)
                 msg_str = data.decode('utf-8')
-                
-                # =========== [修改这里] ===========
-                # 解析一下 JSON，专门看看 SNR 是多少
-                try:
-                    debug_msg = json.loads(msg_str)
-                    # 提取 SNR，如果没有这个字段显示 N/A
-                    snr_val = debug_msg.get('phy_state', {}).get('snr', 'N/A')
-                    print(f"[物理层调试] 收到心跳 | 来自: {debug_msg.get('sender_id')} | SNR: {snr_val}")
-                except:
-                    # 如果解析失败，打印完整原始数据看看发生了什么
-                    print(f"[物理层调试] 原始数据: {msg_str}")
-                # ================================
-
                 msg = RaftMessage.from_json(msg_str)
+                
                 if msg and msg.sender_id != self.node_id:
-                    self.handle_message(msg)
-            except BlockingIOError:
-                pass
+                    self._update_peer_state(msg.sender_id, msg.phy_state)
+                    
+                    with self.lock:
+                        # 🔧 统一处理更高 term
+                        if msg.term > self.current_term:
+                            print(f"📡 发现更高 Term {msg.term}，降级为 Follower")
+                            self._step_down(msg.term)
+                        
+                        if msg.type == "RequestVote":
+                            self.handle_request_vote(msg)
+                            
+                        elif msg.type == "VoteResponse":
+                            # 🔧 只在当前 term 且为 Candidate 时处理
+                            if self.state == self.STATE_CANDIDATE and msg.term == self.current_term:
+                                if msg.vote_granted:
+                                    self.votes_received += 1
+                                    print(f"🗳️ [得票] 来自节点 {msg.sender_id}，当前票数: {self.votes_received}/{self.total_nodes}")
+                                    if self.votes_received > self.total_nodes / 2:
+                                        self.become_leader()
+                                        
+                        elif msg.type == "AppendEntries":
+                            self.handle_append_entries(msg)
+                            
+                        elif msg.type == "AppendEntriesResponse":
+                            # 🔧 新增: Leader 处理复制响应
+                            if self.state == self.STATE_LEADER and msg.term == self.current_term:
+                                self._handle_append_response(msg)
+                            
             except Exception as e:
-                print(f"数据错误: {e}")
-
-            # 2. 状态机超时检查
-            now = time.time()
+                print(f"数据包错误: {e}")
+    
+    def _handle_append_response(self, msg: RaftMessage):
+        """Leader 处理 AppendEntries 响应"""
+        peer_id = msg.sender_id
+        if msg.success:
+            # 更新 nextIndex 和 matchIndex
+            self.next_index[peer_id] = msg.last_log_index + 1
+            self.match_index[peer_id] = msg.last_log_index
             
-            if self.state == self.STATE_LEADER:
-                if now - self.last_heartbeat_tx >= self.heartbeat_interval:
-                    self.send_heartbeat()
-            else:
-                if now - self.last_heartbeat_rx >= self.election_timeout:
-                    self.start_election()
-
-            # 3. 模拟车辆移动
-            self.vehicle.update_simulation()
+            # 检查是否可以提交更多日志
+            self._try_commit()
+        else:
+            # 日志不一致，回退 nextIndex 重试
+            self.next_index[peer_id] = max(1, self.next_index.get(peer_id, 1) - 1)
+    
+    def _try_commit(self):
+        """Leader 检查并提交多数派已复制的日志"""
+        for n in range(len(self.log), self.commit_index, -1):
+            if self.log[n - 1].term != self.current_term:
+                continue  # 只能提交当前 term 的日志
             
-            time.sleep(0.01)
+            # 计算已复制该条目的节点数 (包括自己)
+            count = 1
+            for peer_id, match_idx in self.match_index.items():
+                if match_idx >= n:
+                    count += 1
+            
+            if count > self.total_nodes / 2:
+                self.commit_index = n
+                self._apply_committed_entries()
+                break
+
+    def run_loop(self):
+        print("🟢 主状态机启动...")
+        while self.running:
+            with self.lock:
+                now = time.time()
+                if self.state == self.STATE_LEADER:
+                    # 🔧 使用专门的 last_heartbeat_sent 控制发送间隔
+                    if now - self.last_heartbeat_sent >= self.heartbeat_interval:
+                        self._send_heartbeat()
+                        self.last_heartbeat_sent = now
+                else:
+                    # Follower/Candidate 检查选举超时
+                    timeout = self._calculate_election_timeout()
+                    if now - self.last_heartbeat_time >= timeout:
+                        self.start_election()
+            time.sleep(0.05)
+    
+    def input_loop(self):
+        """🔧 新增: 用户输入线程，用于提交命令"""
+        print("⌨️  输入线程启动... (按回车提交变道指令)")
+        while self.running:
+            try:
+                input()  # 等待用户按回车
+                self.propose_command("向左变道")
+            except EOFError:
+                break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--id", type=int, required=True, help="Node ID")
     parser.add_argument("--total", type=int, default=3, help="Total Nodes")
-    parser.add_argument("--tx", type=int, required=True, help="Port to send TO SDR")
-    parser.add_argument("--rx", type=int, required=True, help="Port to listen FROM SDR")
+    parser.add_argument("--tx", type=int, required=True, help="TX Port")
+    parser.add_argument("--rx", type=int, required=True, help="RX Port")
     args = parser.parse_args()
     
     node = RaftNode(args.id, args.total, args.tx, args.rx)
+    
+    # 网络接收线程
+    t_net = threading.Thread(target=node.recv_loop)
+    t_net.daemon = True
+    t_net.start()
+    
+    # 🔧 用户输入线程 (允许 Leader 提交命令)
+    t_input = threading.Thread(target=node.input_loop)
+    t_input.daemon = True
+    t_input.start()
+    
     try:
         node.run_loop()
     except KeyboardInterrupt:
-        print("停止运行")
+        print("\n🛑 停止运行")
