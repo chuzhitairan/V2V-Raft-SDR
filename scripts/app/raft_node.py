@@ -4,7 +4,6 @@ import random
 import json
 import argparse
 import threading
-from collections import deque
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional
 
@@ -20,9 +19,7 @@ BROADCAST_IP = "127.0.0.1"
 
 @dataclass
 class PhyState:
-    """车辆物理状态 & 信道状态"""
-    pos: List[float] = field(default_factory=lambda: [0.0, 0.0])
-    vel: List[float] = field(default_factory=lambda: [0.0, 0.0])
+    """信道状态（为未来加权投票做准备）"""
     snr: float = 0.0
 
 @dataclass
@@ -93,20 +90,23 @@ class RaftNode:
         self.next_index = {}   # 每个节点的下一条日志索引
         self.match_index = {}  # 每个节点已复制的最高日志索引
         
-        # RUBICONe State
-        self.peers = {} 
-        self.snr_window_size = 5 
-        
         # System
         self.lock = threading.RLock()
-        self.last_heartbeat_time = time.time()  # 🔧 重命名，语义更清晰
-        self.last_heartbeat_sent = time.time()  # 🔧 Leader 发送心跳时间
+        self.last_heartbeat_time = time.time()
+        self.last_heartbeat_sent = time.time()
         self.running = True
         
-        # Params
-        self.T_base = 3.0       
-        self.alpha = 50.0       
-        self.heartbeat_interval = 1.0
+        # 邻居状态表（被动记录 SNR，为未来加权投票做准备）
+        self.peers: Dict[int, dict] = {}
+        
+        # 基础 Raft 参数 (固定超时 + 随机抖动)
+        self.election_timeout_min = 1.5   # 选举超时下限 (秒)
+        self.election_timeout_max = 3.0   # 选举超时上限 (秒)
+        self.heartbeat_interval = 0.15    # 心跳间隔 (秒)
+        
+        # 邻居筛选参数 (SNR 过滤)
+        self.snr_threshold = 5.0          # SNR 阈值 (dB)，低于此值的消息被丢弃
+        self.filtered_count = 0           # 被过滤的消息计数
         
         # Network
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -114,43 +114,16 @@ class RaftNode:
         
         print(f"🚗 [节点 {self.node_id}] 就绪 | 监听: {self.rx_port} -> 发送: {self.tx_port}")
 
-    def _update_peer_state(self, sender_id, phy_state):
-        with self.lock:
-            if sender_id not in self.peers:
-                self.peers[sender_id] = {
-                    'snr_history': deque(maxlen=self.snr_window_size),
-                    'last_seen': time.time()
-                }
-            if phy_state.snr != 0: 
-                self.peers[sender_id]['snr_history'].append(phy_state.snr)
-            self.peers[sender_id]['last_seen'] = time.time()
+    def _update_peer_state(self, sender_id: int, phy_state: PhyState):
+        """被动记录邻居 SNR（不影响 Raft 决策，仅用于观测）"""
+        if sender_id not in self.peers:
+            self.peers[sender_id] = {'snr': 0.0, 'last_seen': 0.0}
+        self.peers[sender_id]['snr'] = phy_state.snr
+        self.peers[sender_id]['last_seen'] = time.time()
 
     def _calculate_election_timeout(self):
-        """RUBICONe 自适应超时算法"""
-        with self.lock:
-            total_gamma = 0.0
-            active_peers = 0
-            now = time.time()
-            
-            for _, info in self.peers.items():
-                if now - info['last_seen'] < 10.0 and len(info['snr_history']) > 0:
-                    avg_snr = sum(info['snr_history']) / len(info['snr_history'])
-                    total_gamma += avg_snr
-                    active_peers += 1
-            
-            # [保留逻辑] 孤立节点使用标准超时，避免无限等待
-            if active_peers == 0:
-                factor = 1.0 
-            else:
-                if total_gamma < 1.0: total_gamma = 1.0
-                factor = 1.0 + (self.alpha / total_gamma)
-            
-            jitter = random.uniform(0.1, 0.2) * self.T_base
-            timeout = (factor * self.T_base) + jitter
-            
-            # [调试] 如果想看算法细节，可以取消注释
-            # print(f"[Timer] Peers={active_peers} | Gamma={total_gamma:.1f} | Timeout={timeout:.2f}s")
-            return timeout
+        """基础 Raft 选举超时: 固定范围 + 随机抖动"""
+        return random.uniform(self.election_timeout_min, self.election_timeout_max)
 
     def _get_last_log_index_and_term(self):
         if len(self.log) > 0:
@@ -393,9 +366,17 @@ class RaftNode:
                 msg = RaftMessage.from_json(msg_str)
                 
                 if msg and msg.sender_id != self.node_id:
-                    self._update_peer_state(msg.sender_id, msg.phy_state)
+                    # 邻居筛选: 信号太差直接丢弃 (模拟物理层屏蔽)
+                    if msg.phy_state.snr < self.snr_threshold:
+                        self.filtered_count += 1
+                        if self.filtered_count % 100 == 1:  # 每 100 次打印一次
+                            print(f"🚫 [过滤] 节点 {msg.sender_id} SNR={msg.phy_state.snr:.1f}dB < {self.snr_threshold}dB (累计过滤: {self.filtered_count})")
+                        continue
                     
                     with self.lock:
+                        # 被动记录邻居 SNR（不影响决策，仅用于观测）
+                        self._update_peer_state(msg.sender_id, msg.phy_state)
+                        
                         # 🔧 统一处理更高 term
                         if msg.term > self.current_term:
                             print(f"📡 发现更高 Term {msg.term}，降级为 Follower")
@@ -488,9 +469,12 @@ if __name__ == "__main__":
     parser.add_argument("--total", type=int, default=3, help="Total Nodes")
     parser.add_argument("--tx", type=int, required=True, help="TX Port")
     parser.add_argument("--rx", type=int, required=True, help="RX Port")
+    parser.add_argument("--snr-threshold", type=float, default=5.0, help="SNR threshold for neighbor filtering (dB)")
     args = parser.parse_args()
     
     node = RaftNode(args.id, args.total, args.tx, args.rx)
+    node.snr_threshold = args.snr_threshold
+    print(f"📡 邻居筛选阈值: {node.snr_threshold} dB")
     
     # 网络接收线程
     t_net = threading.Thread(target=node.recv_loop)
