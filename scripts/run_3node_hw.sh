@@ -24,7 +24,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # SDR 配置
-E200_IPS=("192.168.1.10" "192.168.1.11" "192.168.1.12")
+# E200 (以太网): addr=192.168.1.10
+# U200 (USB): serial=316B611
+SDR_ARGS=("addr=192.168.1.10" "addr=192.168.1.11" "addr=192.168.1.12")
 TX_GAIN=60
 RX_GAIN=40
 FREQ=5.89e9        # 5.89 GHz (802.11p)
@@ -48,16 +50,33 @@ mkdir -p "$LOG_DIR"
 # ==============================================
 
 check_network() {
-    echo -e "${BLUE}[1/4] 检查网络连接...${NC}"
+    echo -e "${BLUE}[1/4] 检查 SDR 连接...${NC}"
     for i in 0 1 2; do
-        ip="${E200_IPS[$i]}"
-        echo -n "  E200-$((i+1)) ($ip): "
-        if ping -c 1 -W 1 "$ip" &> /dev/null; then
-            echo -e "${GREEN}✓ 在线${NC}"
+        args="${SDR_ARGS[$i]}"
+        echo -n "  SDR-$((i+1)) ($args): "
+        
+        # 检查是否为以太网设备 (addr=)
+        if [[ "$args" == addr=* ]]; then
+            ip="${args#addr=}"
+            if ping -c 1 -W 1 "$ip" &> /dev/null; then
+                echo -e "${GREEN}✓ 在线 (Ethernet)${NC}"
+            else
+                echo -e "${RED}✗ 离线${NC}"
+                echo -e "${RED}错误: SDR-$((i+1)) 无法连接，请检查网络配置${NC}"
+                exit 1
+            fi
+        # USB 设备 (serial=) 使用 uhd_find_devices 检查
+        elif [[ "$args" == serial=* ]]; then
+            serial="${args#serial=}"
+            if uhd_find_devices --args="$args" 2>/dev/null | grep -q "Device Address"; then
+                echo -e "${GREEN}✓ 在线 (USB)${NC}"
+            else
+                echo -e "${RED}✗ 未找到${NC}"
+                echo -e "${RED}错误: SDR-$((i+1)) 无法找到，请检查 USB 连接${NC}"
+                exit 1
+            fi
         else
-            echo -e "${RED}✗ 离线${NC}"
-            echo -e "${RED}错误: E200-$((i+1)) 无法连接，请检查网络配置${NC}"
-            exit 1
+            echo -e "${YELLOW}跳过检查 (未知类型)${NC}"
         fi
     done
 }
@@ -67,19 +86,18 @@ start_phy_layers() {
     
     for i in 0 1 2; do
         node_id=$((i+1))
-        ip="${E200_IPS[$i]}"
+        sdr_args="${SDR_ARGS[$i]}"
         app_tx="${APP_TX_PORTS[$i]}"
         app_rx="${APP_RX_PORTS[$i]}"
         
-        echo -e "  启动 PHY-$node_id (SDR: $ip, 端口: $app_tx/$app_rx)"
+        echo -e "  启动 PHY-$node_id (SDR: $sdr_args, 端口: $app_tx/$app_rx)"
         
         python3 "$PROJECT_DIR/scripts/core/v2v_hw_phy.py" \
-            --sdr-ip "$ip" \
+            --sdr-args "$sdr_args" \
             --tx-gain "$TX_GAIN" \
             --rx-gain "$RX_GAIN" \
-            --freq "$FREQ" \
-            --app-tx-port "$app_tx" \
-            --app-rx-port "$app_rx" \
+            --udp-recv-port "$app_tx" \
+            --udp-send-port "$app_rx" \
             > "$LOG_DIR/phy_$node_id.log" 2>&1 &
         
         PHY_PIDS+=($!)
@@ -122,7 +140,7 @@ show_status() {
     echo -e "  日志目录: ${YELLOW}$LOG_DIR${NC}"
     echo "  PHY 层:"
     for i in 0 1 2; do
-        echo "    Node $((i+1)): SDR=${E200_IPS[$i]}, Port=${APP_TX_PORTS[$i]}/${APP_RX_PORTS[$i]}"
+        echo "    Node $((i+1)): SDR=${SDR_ARGS[$i]}, Port=${APP_TX_PORTS[$i]}/${APP_RX_PORTS[$i]}"
     done
     echo "  Raft 参数:"
     echo "    选举超时: 1.5-3.0s"

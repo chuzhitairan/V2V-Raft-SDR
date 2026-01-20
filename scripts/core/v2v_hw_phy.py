@@ -75,7 +75,7 @@ from gnuradio import eng_notation
 
 class wifi_transceiver(gr.top_block, Qt.QWidget):
 
-    def __init__(self, rx_gain=0.75, serial_num="addr=192.168.1.10", tx_gain=0.75, udp_recv_port=10000, udp_send_port=20000):
+    def __init__(self, rx_gain=0.75, sdr_args="addr=192.168.1.10", tx_gain=0.75, udp_recv_port=10000, udp_send_port=20000):
         gr.top_block.__init__(self, "Wifi Transceiver", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Wifi Transceiver")
@@ -110,7 +110,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         # Parameters
         ##################################################
         self.rx_gain = rx_gain
-        self.serial_num = serial_num
+        self.sdr_args = sdr_args
         self.tx_gain = tx_gain
         self.udp_recv_port = udp_recv_port
         self.udp_send_port = udp_send_port
@@ -234,7 +234,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
             sensitivity=0.56,
         )
         self.uhd_usrp_source_0 = uhd.usrp_source(
-            ",".join((serial_num, "")),
+            ",".join((sdr_args, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -247,7 +247,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.uhd_usrp_source_0.set_center_freq(uhd.tune_request(freq, rf_freq = freq - lo_offset, rf_freq_policy=uhd.tune_request.POLICY_MANUAL), 0)
         self.uhd_usrp_source_0.set_normalized_gain(rx_gain, 0)
         self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            ",".join((serial_num, "")),
+            ",".join((sdr_args, "")),
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
@@ -423,8 +423,8 @@ def argument_parser():
         "--rx-gain", dest="rx_gain", type=eng_float, default=eng_notation.num_to_str(float(0.75)),
         help="Set RX Gain [default=%(default)r]")
     parser.add_argument(
-        "--serial-num", dest="serial_num", type=str, default="addr=192.168.1.10",
-        help="Set SDR Device Args [default=%(default)r]")
+        "--sdr-args", dest="sdr_args", type=str, default="addr=192.168.1.10",
+        help="UHD Device Args (e.g., 'addr=192.168.1.10' for E200, 'serial=316B611' for U200) [default=%(default)r]")
     parser.add_argument(
         "--tx-gain", dest="tx_gain", type=eng_float, default=eng_notation.num_to_str(float(0.75)),
         help="Set TX Gain [default=%(default)r]")
@@ -512,7 +512,7 @@ def main(top_block_cls=wifi_transceiver, options=None):
 
     qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls(rx_gain=options.rx_gain, serial_num=options.serial_num, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
+    tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
 
     tb.start()
     tb.flowgraph_started.set()
