@@ -1,0 +1,587 @@
+WARNING:root:Found persistent state path '/home/chuzhitairan/.local/state/gnuradio', but file does not exist. Old default persistent state path '/home/chuzhitairan/.grc_gnuradio' exists; using that. Please consider moving state to new location.
+MAPPER: encoding: 0
+chunks_to_symbols :info: set_min_output_buffer on block 7 to 207744
+fft_v_fftw :info: set_min_output_buffer on block 9 to 2077440
+ofdm_cyclic_prefixer :info: set_min_output_buffer on block 11 to 2077440
+ofdm_carrier_allocator_cvc :info: set_min_output_buffer on block 12 to 207744
+chunks_to_symbols :info: set_min_output_buffer on block 13 to 415488
+tagged_stream_mux :info: set_min_output_buffer on block 14 to 207744
+[INFO] [UHD] linux; GNU C++ version 13.3.0; Boost_108300; UHD_4.1.0.0-0-45cabfde
+[INFO] [ANT] Detected Device: ANTSDR
+[INFO] [ANT] Initialize CODEC control...
+[INFO] [ANT] Initialize Radio control...
+[INFO] [ANT] Performing register loopback test... 
+[INFO] [ANT] Register loopback test passed
+[INFO] [ANT] Performing register loopback test... 
+[INFO] [ANT] Register loopback test passed
+[INFO] [ANT] Setting master clock rate selection to 'automatic'.
+[INFO] [ANT] Asking for clock rate 16.000000 MHz... 
+[INFO] [ANT] Actually got clock rate 16.000000 MHz.
+[INFO] [ANT] Asking for clock rate 40.000000 MHz... 
+[INFO] [ANT] Actually got clock rate 40.000000 MHz.
+foo_packet_pad2 :info: set_min_output_buffer on block 33 to 100000
+multiply_const_cc :info: set_min_output_buffer on block 35 to 100000
+usrp_source :error: In the last 1399 ms, 1 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 760 ms, 9 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 761 ms, 27 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 759 ms, 53 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 750 ms, 53 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 755 ms, 54 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 755 ms, 46 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 756 ms, 52 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 801 ms, 51 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 755 ms, 33 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 753 ms, 69 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 757 ms, 61 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 767 ms, 33 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 752 ms, 35 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 752 ms, 70 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 757 ms, 74 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 758 ms, 79 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 751 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 752 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 782 ms, 62 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 0
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 1, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+Dusrp_source :error: In the last 784 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 779 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 1
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 2, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 765 ms, 57 overflows occurred.
+Dpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 1
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 2, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDD
+new mac frame  (length 259)
+=========================================pdu len 
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: 259Data
+seq nr: 2
+
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 3, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDUUUDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 753 ms, 45 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 752 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 3
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 4, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 3
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 4, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDusrp_source :error: In the last 776 ms, 21 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 762 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 4
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "VoteResponse", "term": 5, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+Dusrp_source :error: In the last 760 ms, 57 overflows occurred.
+DDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDusrp_source :error: In the last 756 ms, 13 overflows occurred.
+DDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 5
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 6, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDUDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 753 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 773 ms, 53 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 6
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 7, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 750 ms, 58 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 769 ms, 22 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 7
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 8, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 8
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "VoteResponse", "term": 8, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 759 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 760 ms, 55 overflows occurred.
+DDDDDDDDDpdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 9
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 9, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 8
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 9, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 762 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDusrp_source :error: In the last 750 ms, 18 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 762 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDUUUDUUUDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 773 ms, 49 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 10
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.5
+{"type": "RequestVote", "term": 11, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDusrp_source :error: In the last 762 ms, 21 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 754 ms, 54 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 776 ms, 48 overflows occurred.
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 13
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.666667
+{"type": "VoteResponse", "term": 12, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 762 ms, 34 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 753 ms, 53 overflows occurred.
+DDDDDDDDDDDDUUDDD
+new mac frame  (length 260)
+=========================================
+duration: pdu len 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 14
+260
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "VoteResponse", "term": 13, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 784 ms, 34 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 767 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 15
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 14, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDpdu len 261
+
+new mac frame  (length 261)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 14
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 14, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDusrp_source :error: In the last 766 ms, 56 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 767 ms, 9 overflows occurred.
+DDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 17
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.666667
+{"type": "RequestVote", "term": 15, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 15
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 15, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDusrp_source :error: In the last 754 ms, 11 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 750 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 18
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.666667
+{"type": "RequestVote", "term": 16, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 16
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 16, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+Dusrp_source :error: In the last 795 ms, 55 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 766 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 767 ms, 57 overflows occurred.
+Dpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 19
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.666667
+{"type": "RequestVote", "term": 17, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+Dpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 17
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 17, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDusrp_source :error: In the last 766 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 755 ms, 55 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDUusrp_source :error: In the last 760 ms, 53 overflows occurred.
+DUDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 18
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 18, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDusrp_source :error: In the last 776 ms, 13 overflows occurred.
+DDDDDDDDDDusrp_source :error: In the last 763 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDUDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 760 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 759 ms, 57 overflows occurred.
+DDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 23
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.8
+{"type": "RequestVote", "term": 20, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDUDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 760 ms, 46 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 757 ms, 33 overflows occurred.
+DDDDDDDDDDDDDDDDDDpdu len 
+260new mac frame  (length 260)
+=========================================
+
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 24
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 21, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 21
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 21, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 757 ms, 51 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 752 ms, 54 overflows occurred.
+DDDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 25
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.75
+{"type": "RequestVote", "term": 22, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 22
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 22, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDusrp_source :error: In the last 766 ms, 14 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDUDUDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 26
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.75
+{"type": "VoteResponse", "term": 23, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDusrp_source :error: In the last 758 ms, 57 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 759 ms, 57 overflows occurred.
+DDDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 24
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "RequestVote", "term": 24, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 27
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.666667
+{"type": "VoteResponse", "term": 24, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDusrp_source :error: In the last 759 ms, 9 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 759 ms, 55 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDUUDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 28
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "VoteResponse", "term": 25, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 758 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 757 ms, 47 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 29
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 26, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDDpdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 26
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 26, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+DDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 756 ms, 55 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 761 ms, 55 overflows occurred.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDusrp_source :error: In the last 760 ms, 56 overflows occurred.
+DDDDDDDDDDDDDDDpdu len 261
+
+new mac frame  (length 261)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 31
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.8
+{"type": "VoteResponse", "term": 27, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+DDDDDDterminate reached from thread id: 77fda67fc6c0Got unknown exception

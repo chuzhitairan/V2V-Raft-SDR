@@ -1,0 +1,161 @@
+WARNING:root:Found persistent state path '/home/chuzhitairan/.local/state/gnuradio', but file does not exist. Old default persistent state path '/home/chuzhitairan/.grc_gnuradio' exists; using that. Please consider moving state to new location.
+MAPPER: encoding: 0
+chunks_to_symbols :info: set_min_output_buffer on block 7 to 207744
+fft_v_fftw :info: set_min_output_buffer on block 9 to 2077440
+ofdm_cyclic_prefixer :info: set_min_output_buffer on block 11 to 2077440
+ofdm_carrier_allocator_cvc :info: set_min_output_buffer on block 12 to 207744
+chunks_to_symbols :info: set_min_output_buffer on block 13 to 415488
+tagged_stream_mux :info: set_min_output_buffer on block 14 to 207744
+[INFO] [UHD] linux; GNU C++ version 13.3.0; Boost_108300; UHD_4.1.0.0-0-45cabfde
+[INFO] [B200] Detected Device: B205mini
+[INFO] [B200] Operating over USB 3.
+[INFO] [B200] Initialize CODEC control...
+[INFO] [B200] Initialize Radio control...
+[INFO] [B200] Performing register loopback test... 
+[INFO] [B200] Register loopback test passed
+[INFO] [B200] Setting master clock rate selection to 'automatic'.
+[INFO] [B200] Asking for clock rate 16.000000 MHz... 
+[INFO] [B200] Actually got clock rate 16.000000 MHz.
+[INFO] [B200] Asking for clock rate 40.000000 MHz... 
+[INFO] [B200] Actually got clock rate 40.000000 MHz.
+foo_packet_pad2 :info: set_min_output_buffer on block 33 to 100000
+multiply_const_cc :info: set_min_output_buffer on block 35 to 100000
+usrp_source :error: In the last 1857 ms, 1 overflows occurred.
+OOusrp_source :error: In the last 3130 ms, 1 overflows occurred.
+pdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 0
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 1, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 1
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "VoteResponse", "term": 2, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 3563 ms, 1 overflows occurred.
+OOusrp_source :error: In the last 1809 ms, 1 overflows occurred.
+Opdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 5
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.75
+{"type": "RequestVote", "term": 5, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 1615 ms, 2 overflows occurred.
+Opdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 6
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 7, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 1707 ms, 1 overflows occurred.
+Opdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 7
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0
+{"type": "RequestVote", "term": 8, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+pdu len 259
+
+new mac frame  (length 259)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 7
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.999756
+{"type": "VoteResponse", "term": 8, "sender_id": 5, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+Ousrp_source :error: In the last 3361 ms, 1 overflows occurred.
+pdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 9
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.5
+{"type": "VoteResponse", "term": 10, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+usrp_source :error: In the last 1752 ms, 1 overflows occurred.
+Ousrp_source :error: In the last 3457 ms, 1 overflows occurred.
+OOOusrp_source :error: In the last 1706 ms, 2 overflows occurred.
+Opdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 13
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.75
+{"type": "VoteResponse", "term": 15, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": true, "phy_state": {"snr": 0.0}}
+Ousrp_source :error: In the last 2113 ms, 2 overflows occurred.
+usrp_source :error: In the last 1709 ms, 1 overflows occurred.
+Opdu len 260
+
+new mac frame  (length 260)
+=========================================
+duration: 00 00
+frame control: 00 08 (DATA)
+Subtype: Data
+seq nr: 15
+address 1: 30:14:4a:e6:46:e4
+address 2: 12:34:56:78:90:ab
+address 3: 42:42:42:42:42:42
+instantaneous fer: 0.5
+{"type": "RequestVote", "term": 17, "sender_id": 1, "prev_log_index": 0, "prev_log_term": 0, "entries": [], "leader_commit": 0, "last_log_index": 0, "last_log_term": 0, "success": false, "vote_granted": false, "phy_state": {"snr": 0.0}}
+O🚀 PHY 层已启动 (无 GUI 模式)
+   SDR: serial=U200100
+   端口: 10005 (recv) / 20005 (send)
+   按 Ctrl+C 停止...
+🎛️  控制服务器启动: 端口 9005
+   支持命令: set_tx_gain, set_rx_gain, get_gains, ping
+
+🛑 正在停止...
+
+🛑 正在停止...

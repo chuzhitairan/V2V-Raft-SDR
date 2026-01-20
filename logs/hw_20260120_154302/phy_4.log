@@ -1,0 +1,39 @@
+WARNING:root:Found persistent state path '/home/chuzhitairan/.local/state/gnuradio', but file does not exist. Old default persistent state path '/home/chuzhitairan/.grc_gnuradio' exists; using that. Please consider moving state to new location.
+MAPPER: encoding: 0
+chunks_to_symbols :info: set_min_output_buffer on block 7 to 207744
+fft_v_fftw :info: set_min_output_buffer on block 9 to 2077440
+ofdm_cyclic_prefixer :info: set_min_output_buffer on block 11 to 2077440
+ofdm_carrier_allocator_cvc :info: set_min_output_buffer on block 12 to 207744
+chunks_to_symbols :info: set_min_output_buffer on block 13 to 415488
+tagged_stream_mux :info: set_min_output_buffer on block 14 to 207744
+[INFO] [UHD] linux; GNU C++ version 13.3.0; Boost_108300; UHD_4.1.0.0-0-45cabfde
+[INFO] [ANT] Detected Device: ANTSDR
+[ERROR] [UHD] Exception caught in safe-call.
+  in virtual radio_ctrl_core_3000_impl::~radio_ctrl_core_3000_impl()
+  at /home/chuzhitairan/antsdr_uhd/host/lib/usrp/cores/radio_ctrl_core_3000.cpp:66
+this->peek32(0); _async_task.reset(); -> AssertionError: accum_timeout < _timeout
+  in uint64_t radio_ctrl_core_3000_impl::wait_for_ack(bool)
+  at /home/chuzhitairan/antsdr_uhd/host/lib/usrp/cores/radio_ctrl_core_3000.cpp:228
+
+[INFO] [ANT] Detected ANT net state; resetting device.
+[INFO] [ANT] Detected Device: ANTSDR
+[ERROR] [UHD] Exception caught in safe-call.
+  in virtual radio_ctrl_core_3000_impl::~radio_ctrl_core_3000_impl()
+  at /home/chuzhitairan/antsdr_uhd/host/lib/usrp/cores/radio_ctrl_core_3000.cpp:66
+this->peek32(0); _async_task.reset(); -> EnvironmentError: IOError: Radio ctrl (0) packet parse error - AssertionError: packet_info.packet_count == (seq_to_ack & 0xfff)
+  in uint64_t radio_ctrl_core_3000_impl::wait_for_ack(bool)
+  at /home/chuzhitairan/antsdr_uhd/host/lib/usrp/cores/radio_ctrl_core_3000.cpp:261
+
+Traceback (most recent call last):
+  File "/home/chuzhitairan/V2V-Raft-SDR/scripts/core/v2v_hw_phy.py", line 589, in <module>
+    main()
+  File "/home/chuzhitairan/V2V-Raft-SDR/scripts/core/v2v_hw_phy.py", line 522, in main
+    tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chuzhitairan/V2V-Raft-SDR/scripts/core/v2v_hw_phy.py", line 236, in __init__
+    self.uhd_usrp_source_0 = uhd.usrp_source(
+                             ^^^^^^^^^^^^^^^^
+RuntimeError: EnvironmentError: IOError: Radio ctrl (0) packet parse error - AssertionError: packet_info.packet_count == (seq_to_ack & 0xfff)
+  in uint64_t radio_ctrl_core_3000_impl::wait_for_ack(bool)
+  at /home/chuzhitairan/antsdr_uhd/host/lib/usrp/cores/radio_ctrl_core_3000.cpp:261
+

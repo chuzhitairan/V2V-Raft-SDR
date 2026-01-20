@@ -98,6 +98,7 @@ start_phy_layers() {
             --rx-gain "$RX_GAIN" \
             --udp-recv-port "$app_tx" \
             --udp-send-port "$app_rx" \
+            --no-gui \
             > "$LOG_DIR/phy_$node_id.log" 2>&1 &
         
         PHY_PIDS+=($!)
@@ -117,8 +118,12 @@ start_raft_nodes() {
         
         echo -e "  启动 Raft 节点 $node_id (TX:$tx_port, RX:$rx_port, SNR阈值:${SNR_THRESHOLD}dB)"
         
-        # 使用 xterm 打开独立终端显示每个节点
-        xterm -title "Raft Node $node_id" -e \
+        # 使用 xterm 打开独立终端显示每个节点 (大窗口 + 大字体)
+        xterm -title "Raft Node $node_id" \
+            -geometry 100x30 \
+            -fn 10x20 \
+            -fa 'Monospace' -fs 14 \
+            -e \
             "python3 $PROJECT_DIR/scripts/app/raft_node.py \
                 --id $node_id \
                 --total 3 \

@@ -1,0 +1,36 @@
+WARNING:root:Found persistent state path '/home/chuzhitairan/.local/state/gnuradio', but file does not exist. Old default persistent state path '/home/chuzhitairan/.grc_gnuradio' exists; using that. Please consider moving state to new location.
+MAPPER: encoding: 0
+chunks_to_symbols :info: set_min_output_buffer on block 7 to 207744
+fft_v_fftw :info: set_min_output_buffer on block 9 to 2077440
+ofdm_cyclic_prefixer :info: set_min_output_buffer on block 11 to 2077440
+ofdm_carrier_allocator_cvc :info: set_min_output_buffer on block 12 to 207744
+chunks_to_symbols :info: set_min_output_buffer on block 13 to 415488
+tagged_stream_mux :info: set_min_output_buffer on block 14 to 207744
+[INFO] [UHD] linux; GNU C++ version 13.3.0; Boost_108300; UHD_4.1.0.0-0-45cabfde
+[INFO] [B200] Detected Device: B205mini
+[INFO] [B200] Loading FPGA image: /usr/local/share/uhd/images/usrp_b205mini_fpga.bin...
+[INFO] [B200] Operating over USB 3.
+[INFO] [B200] Initialize CODEC control...
+[INFO] [B200] Initialize Radio control...
+[INFO] [B200] Performing register loopback test... 
+[INFO] [B200] Register loopback test passed
+[INFO] [B200] Setting master clock rate selection to 'automatic'.
+[INFO] [B200] Asking for clock rate 16.000000 MHz... 
+[INFO] [B200] Actually got clock rate 16.000000 MHz.
+[INFO] [B200] Asking for clock rate 40.000000 MHz... 
+[INFO] [B200] Actually got clock rate 40.000000 MHz.
+foo_packet_pad2 :info: set_min_output_buffer on block 33 to 100000
+multiply_const_cc :info: set_min_output_buffer on block 35 to 100000
+Ousrp_source :error: In the last 4771 ms, 1 overflows occurred.
+Ousrp_source :error: In the last 1292 ms, 1 overflows occurred.
+Ousrp_source :error: In the last 1474 ms, 1 overflows occurred.
+Ousrp_source :error: In the last 5336 ms, 1 overflows occurred.
+usrp_source :error: In the last 1814 ms, 1 overflows occurred.
+OOOusrp_source :error: In the last 3707 ms, 2 overflows occurred.
+OOusrp_source :error: In the last 3319 ms, 2 overflows occurred.
+usrp_source :error: In the last 5465 ms, 1 overflows occurred.
+OOusrp_source :error: In the last 2066 ms, 1 overflows occurred.
+usrp_source :error: In the last 5777 ms, 1 overflows occurred.
+OOusrp_source :error: In the last 1745 ms, 1 overflows occurred.
+OOusrp_source :error: In the last 1753 ms, 2 overflows occurred.
+terminate reached from thread id: 76aa6dce76c0Got unknown exception

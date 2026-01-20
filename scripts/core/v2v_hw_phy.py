@@ -437,6 +437,9 @@ def argument_parser():
     parser.add_argument(
         "--ctrl-port", dest="ctrl_port", type=intx, default=9999,
         help="Control port for dynamic gain adjustment [default=%(default)r]")
+    parser.add_argument(
+        "--no-gui", dest="no_gui", action="store_true", default=False,
+        help="Run without GUI (headless mode) [default=%(default)r]")
     return parser
 
 
@@ -510,37 +513,77 @@ def main(top_block_cls=wifi_transceiver, options=None):
     if options is None:
         options = argument_parser().parse_args()
 
-    qapp = Qt.QApplication(sys.argv)
+    # 无 GUI 模式
+    if options.no_gui:
+        # 设置虚拟显示器
+        os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+        qapp = Qt.QApplication(sys.argv)
+        
+        tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
+        tb.start()
+        tb.flowgraph_started.set()
+        
+        # 启动控制服务器线程
+        ctrl_thread = threading.Thread(
+            target=run_control_server, 
+            args=(tb, options.ctrl_port),
+            daemon=True
+        )
+        ctrl_thread.start()
+        
+        print(f"🚀 PHY 层已启动 (无 GUI 模式)")
+        print(f"   SDR: {options.sdr_args}")
+        print(f"   端口: {options.udp_recv_port} (recv) / {options.udp_send_port} (send)")
+        print(f"   按 Ctrl+C 停止...")
+        
+        def sig_handler(sig=None, frame=None):
+            print("\n🛑 正在停止...")
+            tb.stop()
+            tb.wait()
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
+        
+        # 保持运行
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            sig_handler()
+    else:
+        # GUI 模式 (原来的行为)
+        qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
+        tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
 
-    tb.start()
-    tb.flowgraph_started.set()
-    
-    # 启动控制服务器线程
-    ctrl_thread = threading.Thread(
-        target=run_control_server, 
-        args=(tb, options.ctrl_port),
-        daemon=True
-    )
-    ctrl_thread.start()
+        tb.start()
+        tb.flowgraph_started.set()
+        
+        # 启动控制服务器线程
+        ctrl_thread = threading.Thread(
+            target=run_control_server, 
+            args=(tb, options.ctrl_port),
+            daemon=True
+        )
+        ctrl_thread.start()
 
-    tb.show()
+        tb.show()
 
-    def sig_handler(sig=None, frame=None):
-        tb.stop()
-        tb.wait()
+        def sig_handler(sig=None, frame=None):
+            tb.stop()
+            tb.wait()
 
-        Qt.QApplication.quit()
+            Qt.QApplication.quit()
 
-    signal.signal(signal.SIGINT, sig_handler)
-    signal.signal(signal.SIGTERM, sig_handler)
+        signal.signal(signal.SIGINT, sig_handler)
+        signal.signal(signal.SIGTERM, sig_handler)
 
-    timer = Qt.QTimer()
-    timer.start(500)
-    timer.timeout.connect(lambda: None)
+        timer = Qt.QTimer()
+        timer.start(500)
+        timer.timeout.connect(lambda: None)
 
-    qapp.exec_()
+        qapp.exec_()
 
 if __name__ == '__main__':
     main()
