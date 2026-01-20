@@ -129,9 +129,9 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         ##################################################
 
         # Create the options list
-        self._samp_rate_options = [5000000.0, 10000000.0, 20000000.0]
+        self._samp_rate_options = [1000000.0, 5000000.0, 10000000.0, 20000000.0]
         # Create the labels list
-        self._samp_rate_labels = ['5 MHz', '10 MHz', '20 MHz']
+        self._samp_rate_labels = ['1 MHz', '5 MHz', '10 MHz', '20 MHz']
         # Create the combo box
         self._samp_rate_tool_bar = Qt.QToolBar(self)
         self._samp_rate_tool_bar.addWidget(Qt.QLabel("'samp_rate'" + ": "))
@@ -322,10 +322,10 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.msg_connect((self.network_socket_pdu_0, 'pdus'), (self.ieee802_11_mac_0, 'app in'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_mac_0, 'phy in'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_parse_mac_0, 'in'))
-        self.msg_connect((self.wifi_phy_hier_0, 'carrier'), (self.pdu_pdu_to_tagged_stream_0, 'pdus'))
+        # self.msg_connect((self.wifi_phy_hier_0, 'carrier'), (self.pdu_pdu_to_tagged_stream_0, 'pdus'))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.foo_packet_pad2_0, 0))
         self.connect((self.foo_packet_pad2_0, 0), (self.uhd_usrp_sink_0, 0))
-        self.connect((self.pdu_pdu_to_tagged_stream_0, 0), (self.qtgui_const_sink_x_0, 0))
+        # self.connect((self.pdu_pdu_to_tagged_stream_0, 0), (self.qtgui_const_sink_x_0, 0))
         self.connect((self.uhd_usrp_source_0, 0), (self.wifi_phy_hier_0, 0))
         self.connect((self.wifi_phy_hier_0, 0), (self.blocks_multiply_const_vxx_0, 0))
 
