@@ -160,6 +160,7 @@ class wifi_phy_hier(gr.hier_block2):
 
     def set_sensitivity(self, sensitivity):
         self.sensitivity = sensitivity
+        self.sync_short.set_threshold(sensitivity)
 
     def get_window_size(self):
         return self.window_size
