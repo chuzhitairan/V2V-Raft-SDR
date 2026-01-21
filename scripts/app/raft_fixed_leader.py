@@ -229,6 +229,7 @@ class FixedLeaderNode:
         # ----- 配置参数 -----
         self.heartbeat_interval = 0.2  # 心跳发送间隔 (秒)
         self.snr_threshold = 5.0       # SNR 过滤阈值 (dB)
+        self.status_interval = 10.0    # 状态打印间隔 (秒)
         
         # ----- 网络通信 -----
         self.lock = threading.RLock()  # 可重入锁，保护共享状态
@@ -618,8 +619,8 @@ class FixedLeaderNode:
                     self.send_heartbeat()
                     last_heartbeat = now
             
-            # 定期打印状态 (每 10 秒)
-            if now - last_status >= 10.0:
+            # 定期打印状态
+            if now - last_status >= self.status_interval:
                 self._print_status()
                 last_status = now
             
@@ -728,6 +729,8 @@ def main():
                         help="Leader 节点 ID [default: 1]")
     parser.add_argument("--snr-threshold", type=float, default=5.0, 
                         help="SNR 过滤阈值 (dB) [default: 5.0]")
+    parser.add_argument("--status-interval", type=float, default=2.0, 
+                        help="状态打印间隔 (秒) [default: 2.0]")
     args = parser.parse_args()
     
     # 参数验证
@@ -744,7 +747,9 @@ def main():
         leader_id=args.leader_id
     )
     node.snr_threshold = args.snr_threshold
+    node.status_interval = args.status_interval
     print(f"📡 SNR 过滤阈值: {node.snr_threshold} dB")
+    print(f"📊 状态打印间隔: {node.status_interval} 秒")
     
     # 启动接收线程
     t_recv = threading.Thread(target=node.recv_loop, daemon=True)

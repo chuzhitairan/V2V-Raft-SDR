@@ -15,11 +15,12 @@ SDR_ARGS=(
 
 NODE_IDS=(5 6)
 
-# 增益配置 (可通过命令行参数覆盖)
-# 用法: ./run_pc2_u200.sh [TX_GAIN] [RX_GAIN]
-# 示例: ./run_pc2_u200.sh 0.8 0.6
+# 配置参数 (可通过命令行参数覆盖)
+# 用法: ./run_pc2_u200.sh [TX_GAIN] [RX_GAIN] [STATUS_INTERVAL]
+# 示例: ./run_pc2_u200.sh 0.8 0.6 2.0
 TX_GAIN=${1:-0.7}
 RX_GAIN=${2:-0.7}
+STATUS_INTERVAL=${3:-2.0}
 
 # 端口配置 (与全局配置一致)
 APP_TX_PORTS=(10005 10006)
@@ -45,10 +46,13 @@ SCREEN_H=$(echo $SCREEN_SIZE | cut -d'x' -f2)
 COLS=2
 ROWS=1
 
+# 窗口像素尺寸
 WIN_W_PX=$((SCREEN_W / COLS))
-WIN_H_PX=$((SCREEN_H / ROWS - 50))
-WIN_COLS=$((WIN_W_PX / 8 - 2))
-WIN_ROWS=$((WIN_H_PX / 16 - 2))
+WIN_H_PX=$((SCREEN_H / ROWS))
+
+# 窗口字符尺寸 (固定值，适合 14pt 字体)
+WIN_COLS=80
+WIN_ROWS=40
 
 check_phy_ready() {
     local port=$1
@@ -171,11 +175,12 @@ for node_id in "${READY_NODES[@]}"; do
     col=$((win_idx % COLS))
     row=$((win_idx / COLS))
     x=$((col * WIN_W_PX))
-    y=$((row * (WIN_H_PX + 50)))
+    y=$((row * WIN_H_PX))
     
     echo "   启动 $title"
     
     xterm -bg black -fg $color -title "$title" \
+        -fa 'Monospace' -fs 14 \
         -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
         -e bash -c "
             echo '=== $title ==='
@@ -186,7 +191,8 @@ for node_id in "${READY_NODES[@]}"; do
                 --total $TOTAL_NODES \
                 --tx $tx_port \
                 --rx $rx_port \
-                --leader-id $LEADER_ID
+                --leader-id $LEADER_ID \
+                --status-interval $STATUS_INTERVAL
             echo '应用层已停止，按回车关闭窗口...'
             read
         " &
