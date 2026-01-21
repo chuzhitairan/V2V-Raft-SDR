@@ -1,9 +1,0 @@
-WARNING:root:Found persistent state path '/home/chuzhitairan/.local/state/gnuradio', but file does not exist. Old default persistent state path '/home/chuzhitairan/.grc_gnuradio' exists; using that. Please consider moving state to new location.
-MAPPER: encoding: 0
-chunks_to_symbols :info: set_min_output_buffer on block 7 to 207744
-fft_v_fftw :info: set_min_output_buffer on block 9 to 2077440
-ofdm_cyclic_prefixer :info: set_min_output_buffer on block 11 to 2077440
-ofdm_carrier_allocator_cvc :info: set_min_output_buffer on block 12 to 207744
-chunks_to_symbols :info: set_min_output_buffer on block 13 to 415488
-tagged_stream_mux :info: set_min_output_buffer on block 14 to 207744
-[INFO] [UHD] linux; GNU C++ version 13.3.0; Boost_108300; UHD_4.1.0.0-0-45cabfde
