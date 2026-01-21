@@ -17,9 +17,11 @@ SDR_ARGS=(
 
 NODE_IDS=(1 2 3 4)
 
-# 增益配置
-TX_GAIN=0.7
-RX_GAIN=0.7
+# 增益配置 (可通过命令行参数覆盖)
+# 用法: ./run_pc1_e200.sh [TX_GAIN] [RX_GAIN]
+# 示例: ./run_pc1_e200.sh 0.8 0.6
+TX_GAIN=${1:-0.7}
+RX_GAIN=${2:-0.7}
 
 # 端口配置 (与全局配置一致)
 APP_TX_PORTS=(10001 10002 10003 10004)
