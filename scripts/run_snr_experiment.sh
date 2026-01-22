@@ -124,7 +124,7 @@ for i in "${!NODE_IDS[@]}"; do
     # Leader 使用指定增益，Follower 使用初始增益
     if [ $node_id -eq $LEADER_ID ]; then
         tx_gain=$LEADER_GAIN
-        rx_gain=$LEADER_GAIN
+        rx_gain=1.0  # Leader RX 固定为最大值以获得最佳 SNR
     else
         tx_gain=$FOLLOWER_INIT_GAIN
         rx_gain=$FOLLOWER_INIT_GAIN

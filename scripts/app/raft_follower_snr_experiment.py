@@ -110,7 +110,7 @@ class FollowerWithGainAdjust:
         self.max_gain = 1.0             # 最大增益
         self.target_snr = 20.0          # 目标 SNR
         self.snr_tolerance = 2.0        # SNR 容差
-        self.gain_step = 0.02           # 基础调整步长
+        self.gain_step = 0.05           # 基础调整步长（更激进）
         self.last_observed_snr = 0.0    # 上次观测到的 SNR
         self.gain_adjust_count = 0      # 增益调整次数
         
@@ -216,14 +216,14 @@ class FollowerWithGainAdjust:
             # 在容差范围内，不调整
             return
         
-        # 计算调整量 (比例调整)
+        # 计算调整量 (比例调整 - 激进模式)
         # SNR 低了 -> 需要增加增益
         # SNR 高了 -> 需要降低增益
-        adjust_factor = -snr_diff / 10.0  # 每 10dB 偏差调整一个步长倍率
+        adjust_factor = -snr_diff / 5.0  # 每 5dB 偏差调整一个步长倍率（更激进）
         gain_delta = self.gain_step * adjust_factor
         
         # 限制单次调整幅度
-        gain_delta = max(-0.1, min(0.1, gain_delta))
+        gain_delta = max(-0.15, min(0.15, gain_delta))
         
         new_gain = self.current_tx_gain + gain_delta
         new_gain = max(self.min_gain, min(self.max_gain, new_gain))
