@@ -42,6 +42,10 @@ class blk(gr.basic_block):
         self.message_port_register_in(pmt.intern('in'))
         self.message_port_register_out(pmt.intern('out'))
         self.set_msg_handler(pmt.intern('in'), self.handle_msg)
+        
+        # 调试计数
+        self._msg_count = 0
+        self._debug_enabled = True  # 启用调试输出
 
     def handle_msg(self, msg):
         """
@@ -57,6 +61,11 @@ class blk(gr.basic_block):
         # Step 1: 从 metadata 提取 SNR
         # gr-ieee802-11 的 frame_equalizer 会计算并存储 SNR
         snr = self._extract_snr(meta)
+        
+        # 调试输出
+        self._msg_count += 1
+        if self._debug_enabled and (self._msg_count <= 5 or self._msg_count % 50 == 0):
+            print(f"[SNR Injector] msg#{self._msg_count} snr={snr:.1f}dB")
         
         # Step 2: 尝试注入 SNR 到 JSON payload
         try:
@@ -96,12 +105,18 @@ class blk(gr.basic_block):
             SNR 值 (dB)，提取失败返回 0.0
         """
         try:
-            if pmt.dict_has_key(meta, pmt.intern("snr")):
-                return pmt.to_double(
-                    pmt.dict_ref(meta, pmt.intern("snr"), pmt.from_double(0.0))
-                )
-        except (RuntimeError, TypeError):
-            # PMT 类型转换失败
-            pass
+            # 尝试多种可能的 key 名称
+            for key_name in ["snr", "SNR", "snr_db", "evm"]:
+                if pmt.dict_has_key(meta, pmt.intern(key_name)):
+                    val = pmt.dict_ref(meta, pmt.intern(key_name), pmt.from_double(0.0))
+                    return pmt.to_double(val)
+            
+            # 调试: 打印所有 metadata keys
+            if self._debug_enabled and self._msg_count <= 3:
+                print(f"[SNR Injector] metadata keys: {pmt.to_python(meta)}")
+                
+        except (RuntimeError, TypeError) as e:
+            if self._debug_enabled:
+                print(f"[SNR Injector] extract error: {e}")
         return 0.0
 
