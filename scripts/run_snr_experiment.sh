@@ -19,12 +19,14 @@ SDR_ARGS=(
 NODE_IDS=(1 2 3 4)
 
 # 配置参数
-# 用法: ./run_snr_experiment.sh [LEADER_GAIN] [FOLLOWER_INIT_GAIN] [START_SNR]
-# 示例: ./run_snr_experiment.sh 0.8 0.7 20.0
-LEADER_GAIN=${1:-0.8}
-FOLLOWER_INIT_GAIN=${2:-0.7}
-START_SNR=${3:-20.0}
-STATUS_INTERVAL=${4:-2.0}
+# 用法: ./run_snr_experiment.sh [LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR] [STATUS_INTERVAL]
+# 示例: ./run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
+LEADER_TX_GAIN=${1:-0.8}
+LEADER_RX_GAIN=${2:-0.9}
+FOLLOWER_TX_GAIN=${3:-0.7}
+FOLLOWER_RX_GAIN=${4:-0.9}
+START_SNR=${5:-20.0}
+STATUS_INTERVAL=${6:-2.0}
 
 # 端口配置
 APP_TX_PORTS=(10001 10002 10003 10004)
@@ -86,8 +88,8 @@ trap cleanup EXIT INT TERM
 echo "============================================"
 echo "SNR-集群规模关系实验 - E200 节点"
 echo "============================================"
-echo "Leader: Node 1 (TX/RX 增益: $LEADER_GAIN)"
-echo "Follower: Node 2-4 (初始增益: $FOLLOWER_INIT_GAIN)"
+echo "Leader: Node 1 (TX=$LEADER_TX_GAIN, RX=$LEADER_RX_GAIN)"
+echo "Follower: Node 2-4 (TX=$FOLLOWER_TX_GAIN, RX=$FOLLOWER_RX_GAIN)"
 echo "起始 SNR: $START_SNR dB"
 echo ""
 echo "实验流程:"
@@ -123,11 +125,11 @@ for i in "${!NODE_IDS[@]}"; do
     
     # Leader 使用指定增益，Follower 使用初始增益
     if [ $node_id -eq $LEADER_ID ]; then
-        tx_gain=$LEADER_GAIN
-        rx_gain=1.0  # Leader RX 固定为最大值以获得最佳 SNR
+        tx_gain=$LEADER_TX_GAIN
+        rx_gain=$LEADER_RX_GAIN
     else
-        tx_gain=$FOLLOWER_INIT_GAIN
-        rx_gain=$FOLLOWER_INIT_GAIN
+        tx_gain=$FOLLOWER_TX_GAIN
+        rx_gain=$FOLLOWER_RX_GAIN
     fi
     
     echo "   启动 Node $node_id PHY (增益: TX=$tx_gain, RX=$rx_gain)..."
@@ -233,7 +235,7 @@ for node_id in "${NODE_IDS[@]}"; do
                     --rx $rx_port \
                     --ctrl $ctrl_port \
                     --target-snr $START_SNR \
-                    --init-gain $FOLLOWER_INIT_GAIN \
+                    --init-gain $FOLLOWER_TX_GAIN \
                     --status-interval $STATUS_INTERVAL
                 echo '应用层已停止，按回车关闭窗口...'
                 read

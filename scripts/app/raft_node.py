@@ -354,6 +354,9 @@ class RaftNode:
             print(f"❌ 发送失败: {e}")
 
     def _send(self, msg: RaftMessage):
+        # 🔧 增加随机抖动，避免多个 Follower 同时回复导致冲突
+        if msg.type in ["VoteResponse", "AppendEntriesResponse"]:
+            time.sleep(random.uniform(0.01, 0.05))
         self._broadcast(msg)
 
     def recv_loop(self):

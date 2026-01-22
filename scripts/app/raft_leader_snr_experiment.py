@@ -122,7 +122,7 @@ class LeaderWithSNRBroadcast:
         self.peers: Dict[int, dict] = {}
         
         # 配置
-        self.heartbeat_interval = 0.2
+        self.heartbeat_interval = 0.5   # 增大心跳间隔，减少广播风暴
         self.snr_threshold = 0.0        # Leader 不过滤
         self.status_interval = 2.0
         self.snr_report_interval = 1.0  # SNR 报告间隔

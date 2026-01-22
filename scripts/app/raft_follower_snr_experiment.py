@@ -15,6 +15,7 @@ SNR-集群规模关系实验 - Follower 端
 
 import socket
 import time
+import random
 import json
 import argparse
 import threading
@@ -110,7 +111,7 @@ class FollowerWithGainAdjust:
         self.max_gain = 1.0             # 最大增益
         self.target_snr = 20.0          # 目标 SNR
         self.snr_tolerance = 2.0        # SNR 容差
-        self.gain_step = 0.05           # 基础调整步长（更激进）
+        self.gain_step = 0.05           # 基础调整步长 (增大加快收敛)
         self.last_observed_snr = 0.0    # 上次观测到的 SNR
         self.gain_adjust_count = 0      # 增益调整次数
         
@@ -216,14 +217,14 @@ class FollowerWithGainAdjust:
             # 在容差范围内，不调整
             return
         
-        # 计算调整量 (比例调整 - 激进模式)
+        # 计算调整量 (比例调整)
         # SNR 低了 -> 需要增加增益
         # SNR 高了 -> 需要降低增益
-        adjust_factor = -snr_diff / 5.0  # 每 5dB 偏差调整一个步长倍率（更激进）
+        adjust_factor = -snr_diff / 5.0  # 每 5dB 偏差调整一个步长倍率 (加快收敛)
         gain_delta = self.gain_step * adjust_factor
         
         # 限制单次调整幅度
-        gain_delta = max(-0.15, min(0.15, gain_delta))
+        gain_delta = max(-0.15, min(0.15, gain_delta))  # 增大最大调整幅度
         
         new_gain = self.current_tx_gain + gain_delta
         new_gain = max(self.min_gain, min(self.max_gain, new_gain))
@@ -279,6 +280,10 @@ class FollowerWithGainAdjust:
     def _broadcast(self, msg: Message):
         """发送消息"""
         try:
+            # 🔧 增加随机抖动，避免多个 Follower 同时回复导致冲突
+            if msg.type in ["APPEND_RESPONSE", "VOTE_RESPONSE"]:
+                time.sleep(random.uniform(0.01, 0.05))
+
             data = msg.to_json().encode('utf-8')
             self.sock.sendto(data, (BROADCAST_IP, self.tx_port))
         except Exception as e:
