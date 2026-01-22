@@ -208,7 +208,7 @@ for node_id in "${NODE_IDS[@]}"; do
                     --start-snr $START_SNR \
                     --snr-step 2.0 \
                     --measurements 100 \
-                    --stabilize-time 30.0 \
+                    --stabilize-time 60.0 \
                     --snr-tolerance 3.0 \
                     --stable-count 3 \
                     --min-peers 1

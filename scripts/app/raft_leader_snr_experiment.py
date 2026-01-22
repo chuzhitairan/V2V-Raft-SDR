@@ -298,23 +298,26 @@ class LeaderWithSNRBroadcast:
         
         return all_stable, snr_dict
     
-    def wait_for_snr_stable(self, infinite_wait: bool = False) -> bool:
+    def wait_for_snr_stable(self, infinite_wait: bool = False, timeout: float = None) -> bool:
         """等待所有活跃节点的 SNR 稳定
         
         Args:
             infinite_wait: 如果为 True，则无限等待（用于调试/验证连接）
+            timeout: 超时时间 (秒)，如果为 None 则使用默认值 self.stabilize_time
         """
         stable_count = 0
         wait_start = time.time()
         check_count = 0
         
-        print(f"   ⏳ 等待 SNR 稳定 (目标: {self.target_snr}±{self.snr_stable_tolerance} dB)...")
+        effective_timeout = timeout if timeout is not None else self.stabilize_time
+        
+        print(f"   ⏳ 等待 SNR 稳定 (目标: {self.target_snr}±{self.snr_stable_tolerance} dB, 超时: {effective_timeout}s)...")
         if infinite_wait:
             print(f"   💡 调试模式：无限等待，按 Ctrl+C 退出")
         
         while self.running:
             # 检查超时（非无限等待模式）
-            if not infinite_wait and time.time() - wait_start >= self.stabilize_time:
+            if not infinite_wait and time.time() - wait_start >= effective_timeout:
                 print(f"   ⚠️ 等待超时，使用当前状态继续")
                 return True
             
@@ -374,9 +377,12 @@ class LeaderWithSNRBroadcast:
             print(f"📊 测试目标 SNR = {self.target_snr} dB")
             print(f"{'─' * 60}")
             
-            # 等待 SNR 稳定（调试模式下第一个 SNR 无限等待）
+            # 等待 SNR 稳定
+            # 第一轮给予更长的时间 (120s) 以便手动启动节点，后续使用默认配置
+            current_timeout = 120.0 if first_snr else self.stabilize_time
             use_infinite_wait = first_snr and hasattr(self, 'debug_wait') and self.debug_wait
-            if not self.wait_for_snr_stable(infinite_wait=use_infinite_wait):
+            
+            if not self.wait_for_snr_stable(infinite_wait=use_infinite_wait, timeout=current_timeout):
                 if use_infinite_wait:
                     print("实验中止")
                     break
@@ -475,7 +481,9 @@ class LeaderWithSNRBroadcast:
                 break
             
             # 降低目标 SNR
-            self.target_snr -= self.snr_step
+            # 🔧 动态步长调整: >6dB 时步长2.0, <=6dB 时步长0.5 (精细测量低信噪比区域)
+            current_step = 2.0 if self.target_snr > 6.001 else 0.5
+            self.target_snr -= current_step
         
         self.experiment_running = False
         self._print_final_results()

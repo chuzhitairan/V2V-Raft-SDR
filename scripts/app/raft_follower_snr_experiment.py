@@ -108,7 +108,7 @@ class FollowerWithGainAdjust:
         # 增益控制
         self.current_tx_gain = 0.7      # 当前 TX 增益
         self.min_gain = 0.1             # 最小增益
-        self.max_gain = 1.0             # 最大增益
+        self.max_gain = 0.8             # 最大增益
         self.target_snr = 20.0          # 目标 SNR
         self.snr_tolerance = 2.0        # SNR 容差
         self.gain_step = 0.05           # 基础调整步长 (增大加快收敛)
