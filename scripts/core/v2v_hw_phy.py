@@ -118,7 +118,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 5e6
+        self.samp_rate = samp_rate = 3e6
         self.lo_offset = lo_offset = 0
         self.freq = freq = 5890000000
         self.encoding = encoding = 0
@@ -129,9 +129,9 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         ##################################################
 
         # Create the options list
-        self._samp_rate_options = [1000000.0, 5000000.0, 10000000.0, 20000000.0]
+        self._samp_rate_options = [3000000.0, 5000000.0, 10000000.0, 20000000.0]
         # Create the labels list
-        self._samp_rate_labels = ['1 MHz', '5 MHz', '10 MHz', '20 MHz']
+        self._samp_rate_labels = ['3 MHz', '5 MHz', '10 MHz', '20 MHz']
         # Create the combo box
         self._samp_rate_tool_bar = Qt.QToolBar(self)
         self._samp_rate_tool_bar.addWidget(Qt.QLabel("'samp_rate'" + ": "))
