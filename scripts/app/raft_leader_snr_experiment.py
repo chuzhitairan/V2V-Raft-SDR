@@ -135,7 +135,7 @@ class LeaderWithSNRBroadcast:
         self.measurements_per_snr = 100  # 每个 SNR 测量次数
         self.measurement_interval = 0.5  # 测量间隔 (秒)
         self.stabilize_time = 30.0       # 最大稳定等待时间 (秒)
-        self.cluster_timeout = 2.0       # 判断节点在线的超时时间 (秒)
+        self.cluster_timeout = 1.5       # 判断节点在线的超时时间 (秒)
         self.snr_stable_tolerance = 3.0  # SNR 稳定容差 (dB)
         self.snr_stable_count_required = 3  # 需要连续稳定的次数
         self.min_active_peers = 1        # 最少需要的活跃节点数
