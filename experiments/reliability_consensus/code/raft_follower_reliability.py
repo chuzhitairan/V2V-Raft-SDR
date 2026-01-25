@@ -114,7 +114,7 @@ class FollowerReliability:
         self.last_applied = 0
         
         # 增益控制 (复用)
-        self.current_tx_gain = 0.7
+        self.current_tx_gain = 0.5
         self.min_gain = 0.1
         self.max_gain = 0.8
         self.target_snr = 20.0
@@ -403,7 +403,7 @@ def main():
     parser.add_argument("--leader-id", type=int, default=1, help="Leader ID")
     parser.add_argument("--target-snr", type=float, default=20.0, help="目标 SNR")
     parser.add_argument("--snr-tolerance", type=float, default=2.0, help="SNR 容差")
-    parser.add_argument("--init-gain", type=float, default=0.7, help="初始 TX 增益")
+    parser.add_argument("--init-gain", type=float, default=0.5, help="初始 TX 增益")
     parser.add_argument("--p-node", type=float, default=1.0, help="初始节点可信度")
     parser.add_argument("--status-interval", type=float, default=2.0, help="状态打印间隔")
     args = parser.parse_args()

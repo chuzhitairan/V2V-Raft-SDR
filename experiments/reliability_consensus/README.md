@@ -21,9 +21,14 @@
 1. **P_sys (系统可靠性)**：系统做出正确决策的概率
 2. **有效规模 (Effective Scale)**：实际收到投票的节点数
 
-### 判决逻辑
+### 判决逻辑 (加权投票)
 ```
-if total_votes > 0 and yes_votes > total_votes / 2:
+# 加权投票打破偶数节点平局
+w_i = 1 + 0.001 * (SNR_i - SNR_min) / (SNR_max - SNR_min)
+W_yes = sum(w_i for 赞成票)
+W_total = sum(all w_i)
+
+if W_yes > W_total / 2:
     决策正确 (Success)
 else:
     决策失败 (Failure)
@@ -49,7 +54,7 @@ reliability_consensus/
 ### PC1 (4 台 E200)
 ```bash
 cd /home/chuzhitairan/V2V-Raft-SDR
-./scripts/run_reliability_experiment.sh
+./experiments/reliability_consensus/code/run_reliability_experiment.sh
 ```
 
 ### PC2 (手动启动 Node 5, 6)
@@ -57,10 +62,10 @@ cd /home/chuzhitairan/V2V-Raft-SDR
 # Node 5 PHY
 python3 scripts/core/v2v_hw_phy.py --sdr-args 'addr=...' \
     --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \
-    --tx-gain 0.7 --rx-gain 0.9
+    --tx-gain 0.5 --rx-gain 0.9
 
 # Node 5 App
-python3 scripts/app/raft_follower_reliability.py \
+python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
     --id 5 --total 6 --tx 10005 --rx 20005 --ctrl 9005
 
 # Node 6 类似
@@ -75,7 +80,8 @@ python3 scripts/app/raft_follower_reliability.py \
 
 ## 绘图
 ```bash
-python3 scripts/app/plot_reliability.py experiments/reliability_consensus/results/<结果文件.json>
+python3 experiments/reliability_consensus/code/plot_reliability.py \
+    experiments/reliability_consensus/results/<结果文件.json>
 ```
 
 ## 预期图表
@@ -89,23 +95,29 @@ python3 scripts/app/plot_reliability.py experiments/reliability_consensus/result
 
 ## 关键代码差异
 
-### Follower 端
+### Follower 端 (无状态伯努利投票)
 ```python
-# 模拟传感器可信度
+# 模拟传感器可信度 - 无日志一致性检查
 rand_val = random.random()
 if rand_val < self.p_node:
     vote_success = True   # 赞成
 else:
     vote_success = False  # 反对 (不是丢包！)
+
+# 无论投票结果如何，都追加日志
+self.log.append(entry)
 ```
 
-### Leader 端
+### Leader 端 (加权投票)
 ```python
+# 加权投票：SNR 高的节点权重略大
+w_i = 1.0 + 0.001 * (snr_i - snr_min) / (snr_max - snr_min)
+# Leader 虚拟 SNR = max(Follower SNR) + 2.0 dB
+
 # 软件屏蔽：只统计 ID <= n 的节点
-for node_id, success in self.votes_received.items():
-    if node_id <= n:
-        if success:
-            yes_votes += 1
-        else:
-            no_votes += 1
+W_yes = sum(w for node_id, w in weights if vote == True and node_id <= n)
+W_total = sum(w for node_id, w in weights if node_id <= n)
+
+if W_yes > W_total / 2:
+    success = True
 ```

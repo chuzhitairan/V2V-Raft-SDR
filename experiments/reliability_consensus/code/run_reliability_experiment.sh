@@ -23,7 +23,7 @@ NODE_IDS=(1 2 3 4)
 # 增益配置
 LEADER_TX_GAIN=${1:-0.8}
 LEADER_RX_GAIN=${2:-0.9}
-FOLLOWER_TX_GAIN=${3:-0.7}
+FOLLOWER_TX_GAIN=${3:-0.5}
 FOLLOWER_RX_GAIN=${4:-0.9}
 
 # 端口配置
@@ -259,7 +259,7 @@ echo "📋 PC2 手动启动说明 (Node 5, 6):"
 echo "   1. 启动 PHY:"
 echo "      python3 scripts/core/v2v_hw_phy.py --sdr-args 'addr=...' \\"
 echo "          --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \\"
-echo "          --tx-gain 0.7 --rx-gain 0.9"
+echo "          --tx-gain 0.5 --rx-gain 0.9"
 echo ""
 echo "   2. 启动 Follower:"
 echo "      python3 scripts/app/raft_follower_reliability.py \\"
