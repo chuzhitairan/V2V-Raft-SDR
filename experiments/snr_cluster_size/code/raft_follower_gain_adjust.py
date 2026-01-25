@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 """
-SNR-集群规模关系实验 - Follower 端
-==================================
+带自动增益调整的 Follower 节点
+==============================
 
-基于 raft_follower_gain_adjust.py，接收 Leader 广播的动态目标 SNR，
-自动调整 TX 增益使 SNR 接近目标值。
+在固定领导者 Raft 基础上，Follower 接收 Leader 广播的 SNR 报告，
+根据自己被观测到的 SNR 动态调整发射增益，使 SNR 接近目标值。
+
+增益调整算法:
+    - 目标 SNR = 20 dB (可配置)
+    - 如果 SNR < 目标 - 2dB，增加 TX 增益
+    - 如果 SNR > 目标 + 2dB，降低 TX 增益
+    - 使用 PID 风格的调整，步长与偏差成比例
 
 使用方法:
-    python3 raft_follower_snr_experiment.py --id 2 --total 6 \
+    python3 raft_follower_gain_adjust.py --id 2 --role follower --total 6 \
         --tx 10002 --rx 20002 --ctrl 9002
 
 作者: V2V-Raft-SDR 项目
@@ -15,7 +21,6 @@ SNR-集群规模关系实验 - Follower 端
 
 import socket
 import time
-import random
 import json
 import argparse
 import threading
@@ -58,7 +63,6 @@ class Message:
     success: bool = False
     phy_state: PhyState = field(default_factory=PhyState)
     snr_report: Dict[int, float] = field(default_factory=dict)
-    target_snr: float = 0.0  # 动态目标 SNR
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
@@ -108,10 +112,10 @@ class FollowerWithGainAdjust:
         # 增益控制
         self.current_tx_gain = 0.7      # 当前 TX 增益
         self.min_gain = 0.1             # 最小增益
-        self.max_gain = 0.8             # 最大增益
+        self.max_gain = 1.0             # 最大增益
         self.target_snr = 20.0          # 目标 SNR
         self.snr_tolerance = 2.0        # SNR 容差
-        self.gain_step = 0.05           # 基础调整步长 (增大加快收敛)
+        self.gain_step = 0.02           # 基础调整步长
         self.last_observed_snr = 0.0    # 上次观测到的 SNR
         self.gain_adjust_count = 0      # 增益调整次数
         
@@ -196,12 +200,6 @@ class FollowerWithGainAdjust:
         """处理 SNR 报告，调整增益"""
         self.stats['snr_reports_received'] += 1
         
-        # 更新动态目标 SNR (如果 Leader 发送了 target_snr)
-        if hasattr(msg, 'target_snr') and msg.target_snr > 0:
-            if abs(msg.target_snr - self.target_snr) > 0.1:
-                print(f"🎯 [目标SNR更新] {self.target_snr:.1f} -> {msg.target_snr:.1f} dB")
-                self.target_snr = msg.target_snr
-        
         # 查找自己的 SNR
         my_snr = msg.snr_report.get(self.node_id, None)
         if my_snr is None:
@@ -220,11 +218,11 @@ class FollowerWithGainAdjust:
         # 计算调整量 (比例调整)
         # SNR 低了 -> 需要增加增益
         # SNR 高了 -> 需要降低增益
-        adjust_factor = -snr_diff / 5.0  # 每 5dB 偏差调整一个步长倍率 (加快收敛)
+        adjust_factor = -snr_diff / 10.0  # 每 10dB 偏差调整一个步长倍率
         gain_delta = self.gain_step * adjust_factor
         
         # 限制单次调整幅度
-        gain_delta = max(-0.15, min(0.15, gain_delta))  # 增大最大调整幅度
+        gain_delta = max(-0.1, min(0.1, gain_delta))
         
         new_gain = self.current_tx_gain + gain_delta
         new_gain = max(self.min_gain, min(self.max_gain, new_gain))
@@ -280,10 +278,6 @@ class FollowerWithGainAdjust:
     def _broadcast(self, msg: Message):
         """发送消息"""
         try:
-            # 🔧 增加随机抖动，避免多个 Follower 同时回复导致冲突
-            if msg.type in ["APPEND_RESPONSE", "VOTE_RESPONSE"]:
-                time.sleep(random.uniform(0.01, 0.05))
-
             data = msg.to_json().encode('utf-8')
             self.sock.sendto(data, (BROADCAST_IP, self.tx_port))
         except Exception as e:

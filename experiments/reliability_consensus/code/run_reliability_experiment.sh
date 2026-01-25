@@ -1,14 +1,16 @@
 #!/bin/bash
 # ============================================
-# SNR-集群规模关系实验 - 电脑 1 (4 台 E200)
-# Node 1 = Leader (实验控制 + SNR 广播)
-# Node 2-4 = Follower (增益自动调整)
+# 可靠性共识实验 - 启动脚本
+# ============================================
+# Node 1 = Leader (实验控制)
+# Node 2-6 = Follower (可信度模拟)
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# SDR 配置 (4 台 E200)
+# SDR 配置 (根据实际硬件调整)
+# PC1: 4 台 E200
 SDR_ARGS=(
     "addr=192.168.1.10"   # Node 1 (Leader)
     "addr=192.168.1.11"   # Node 2
@@ -18,15 +20,11 @@ SDR_ARGS=(
 
 NODE_IDS=(1 2 3 4)
 
-# 配置参数
-# 用法: ./run_snr_experiment.sh [LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR] [STATUS_INTERVAL]
-# 示例: ./run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
+# 增益配置
 LEADER_TX_GAIN=${1:-0.8}
 LEADER_RX_GAIN=${2:-0.9}
 FOLLOWER_TX_GAIN=${3:-0.7}
 FOLLOWER_RX_GAIN=${4:-0.9}
-START_SNR=${5:-20.0}
-STATUS_INTERVAL=${6:-2.0}
 
 # 端口配置
 APP_TX_PORTS=(10001 10002 10003 10004)
@@ -34,8 +32,16 @@ APP_RX_PORTS=(20001 20002 20003 20004)
 CTRL_PORTS=(9001 9002 9003 9004)
 
 # 全局配置
-TOTAL_NODES=4
+TOTAL_NODES=6    # 包括 PC2 上的两个节点
 LEADER_ID=1
+
+# 实验参数 (可通过命令行覆盖)
+SNR_LEVELS=${5:-"20.0,8.0"}
+P_NODE_LEVELS=${6:-"0.6,0.7,0.8,0.9,1.0"}
+N_LEVELS=${7:-"1,2,3,4,5,6"}
+ROUNDS=${8:-50}
+VOTE_DEADLINE=${9:-0.5}
+STABILIZE_TIME=${10:-10.0}
 
 # 窗口布局 (2x2)
 get_screen_size() {
@@ -77,8 +83,8 @@ cleanup() {
     echo ""
     echo "🛑 停止所有进程..."
     pkill -f "v2v_hw_phy.py" 2>/dev/null
-    pkill -f "raft_leader_snr_experiment.py" 2>/dev/null
-    pkill -f "raft_follower_snr_experiment.py" 2>/dev/null
+    pkill -f "raft_leader_reliability.py" 2>/dev/null
+    pkill -f "raft_follower_reliability.py" 2>/dev/null
     sleep 2
     echo "✅ 清理完成"
 }
@@ -86,66 +92,65 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "============================================"
-echo "SNR-集群规模关系实验 - E200 节点"
+echo "可靠性共识实验 - E200 节点"
 echo "============================================"
-echo "Leader: Node 1 (TX=$LEADER_TX_GAIN, RX=$LEADER_RX_GAIN)"
-echo "Follower: Node 2-4 (TX=$FOLLOWER_TX_GAIN, RX=$FOLLOWER_RX_GAIN)"
-echo "起始 SNR: $START_SNR dB"
+echo "Leader: Node 1"
+echo "Follower: Node 2-4 (PC1) + Node 5-6 (PC2 手动)"
 echo ""
-echo "实验流程:"
-echo "  1. SNR 稳定后自动开始测量"
-echo "  2. 每个 SNR 测量 100 次集群规模"
-echo "  3. SNR 每次降低 2 dB"
-echo "  4. 平均集群规模≤1 时结束"
+echo "实验参数:"
+echo "  SNR 等级: $SNR_LEVELS"
+echo "  p_node 等级: $P_NODE_LEVELS"
+echo "  系统规模 n: $N_LEVELS"
+echo "  每组测试轮数: $ROUNDS"
+echo "  投票截止时间: ${VOTE_DEADLINE}s"
 echo "============================================"
 echo ""
-
-# 清理旧进程
-pkill -f "v2v_hw_phy.py" 2>/dev/null
-pkill -f "raft_leader_snr_experiment.py" 2>/dev/null
-pkill -f "raft_follower_snr_experiment.py" 2>/dev/null
-pkill -f "raft_leader_snr_broadcast.py" 2>/dev/null
-pkill -f "raft_follower_gain_adjust.py" 2>/dev/null
-sleep 2
 
 # ============================================
 # 第一阶段: 启动 PHY 层
 # ============================================
-echo "📡 第一阶段: 启动 PHY 层"
+echo "🚀 第一阶段: 启动 PHY 层"
 echo "--------------------------------------------"
 
-PHY_PIDS=()
-
 for i in "${!NODE_IDS[@]}"; do
-    node_id=${NODE_IDS[$i]}
-    sdr_args=${SDR_ARGS[$i]}
-    tx_port=${APP_TX_PORTS[$i]}
-    rx_port=${APP_RX_PORTS[$i]}
-    ctrl_port=${CTRL_PORTS[$i]}
+    node_id="${NODE_IDS[$i]}"
+    sdr_arg="${SDR_ARGS[$i]}"
+    tx_port="${APP_TX_PORTS[$i]}"
+    rx_port="${APP_RX_PORTS[$i]}"
+    ctrl_port="${CTRL_PORTS[$i]}"
     
-    # Leader 使用指定增益，Follower 使用初始增益
     if [ $node_id -eq $LEADER_ID ]; then
         tx_gain=$LEADER_TX_GAIN
         rx_gain=$LEADER_RX_GAIN
+        role="LEADER"
     else
         tx_gain=$FOLLOWER_TX_GAIN
         rx_gain=$FOLLOWER_RX_GAIN
+        role="FOLLOWER"
     fi
     
-    echo "   启动 Node $node_id PHY (增益: TX=$tx_gain, RX=$rx_gain)..."
+    echo "   启动 Node $node_id PHY ($role)"
     
     python3 $PROJECT_DIR/scripts/core/v2v_hw_phy.py \
-        --sdr-args "$sdr_args" \
+        --sdr-args "$sdr_arg" \
+        --tx-port $rx_port \
+        --rx-port $tx_port \
+        --ctrl-port $ctrl_port \
         --tx-gain $tx_gain \
         --rx-gain $rx_gain \
-        --udp-recv-port $tx_port \
-        --udp-send-port $rx_port \
-        --ctrl-port $ctrl_port \
-        --no-gui &
+        &
     
-    PHY_PIDS+=($!)
+    sleep 2
+done
+
+echo ""
+echo "⏳ 等待 PHY 层就绪..."
+sleep 5
+
+for i in "${!NODE_IDS[@]}"; do
+    node_id="${NODE_IDS[$i]}"
+    ctrl_port="${CTRL_PORTS[$i]}"
     
-    echo "   等待 Node $node_id PHY 就绪..."
     if check_phy_ready $ctrl_port; then
         echo "   ✅ Node $node_id PHY 就绪"
     else
@@ -188,8 +193,8 @@ for node_id in "${NODE_IDS[@]}"; do
     y=$((row * WIN_H_PX))
     
     if [ $node_id -eq $LEADER_ID ]; then
-        # Leader 节点 - 实验版
-        title="Node $node_id [LEADER] 实验控制"
+        # Leader 节点
+        title="Node $node_id [LEADER] 可靠性实验"
         color="yellow"
         
         echo "   启动 $title"
@@ -200,24 +205,23 @@ for node_id in "${NODE_IDS[@]}"; do
             -e bash -c "
                 echo '=== $title ==='
                 echo 'PHY 已就绪，启动实验 Leader...'
-                python3 $PROJECT_DIR/scripts/app/raft_leader_snr_experiment.py \
+                python3 $PROJECT_DIR/scripts/app/raft_leader_reliability.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \
                     --rx $rx_port \
-                    --start-snr $START_SNR \
-                    --snr-step 2.0 \
-                    --measurements 100 \
-                    --stabilize-time 60.0 \
-                    --snr-tolerance 3.0 \
-                    --stable-count 3 \
-                    --min-peers 1
-                echo '应用层已停止，按回车关闭窗口...'
+                    --snr-levels '$SNR_LEVELS' \
+                    --p-node-levels '$P_NODE_LEVELS' \
+                    --n-levels '$N_LEVELS' \
+                    --rounds $ROUNDS \
+                    --vote-deadline $VOTE_DEADLINE \
+                    --stabilize-time $STABILIZE_TIME
+                echo '实验已结束，按回车关闭窗口...'
                 read
             " &
     else
-        # Follower 节点 - 实验版
-        title="Node $node_id [Follower] 增益调整"
+        # Follower 节点
+        title="Node $node_id [Follower] 可靠性模拟"
         color="white"
         
         echo "   启动 $title"
@@ -227,16 +231,17 @@ for node_id in "${NODE_IDS[@]}"; do
             -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
             -e bash -c "
                 echo '=== $title ==='
-                echo 'PHY 已就绪，启动实验 Follower...'
-                python3 $PROJECT_DIR/scripts/app/raft_follower_snr_experiment.py \
+                echo 'PHY 已就绪，启动 Follower...'
+                python3 $PROJECT_DIR/scripts/app/raft_follower_reliability.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \
                     --rx $rx_port \
                     --ctrl $ctrl_port \
-                    --target-snr $START_SNR \
+                    --target-snr 20.0 \
                     --init-gain $FOLLOWER_TX_GAIN \
-                    --status-interval $STATUS_INTERVAL
+                    --p-node 1.0 \
+                    --status-interval 5.0
                 echo '应用层已停止，按回车关闭窗口...'
                 read
             " &
@@ -248,12 +253,19 @@ done
 
 echo ""
 echo "============================================"
-echo "SNR-集群规模实验节点已启动！"
+echo "可靠性共识实验节点已启动！"
 echo ""
-echo "📊 Leader 窗口会显示观测到的各节点 SNR"
-echo "🔧 Follower 会根据目标 SNR 自动调整 TX 增益"
-echo "🎯 SNR 稳定后自动开始集群规模测量"
+echo "📋 PC2 手动启动说明 (Node 5, 6):"
+echo "   1. 启动 PHY:"
+echo "      python3 scripts/core/v2v_hw_phy.py --sdr-args 'addr=...' \\"
+echo "          --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \\"
+echo "          --tx-gain 0.7 --rx-gain 0.9"
 echo ""
+echo "   2. 启动 Follower:"
+echo "      python3 scripts/app/raft_follower_reliability.py \\"
+echo "          --id 5 --total 6 --tx 10005 --rx 20005 --ctrl 9005"
+echo ""
+echo "⌨️  在 Leader 窗口按 Enter 开始实验"
 echo "按 Ctrl+C 停止所有节点"
 echo "============================================"
 
