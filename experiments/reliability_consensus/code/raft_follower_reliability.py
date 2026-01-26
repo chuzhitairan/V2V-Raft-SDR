@@ -118,10 +118,13 @@ class FollowerReliability:
         self.min_gain = 0.1
         self.max_gain = 0.8
         self.target_snr = 20.0
-        self.snr_tolerance = 2.0
+        self.snr_tolerance = 0.5
         self.gain_step = 0.05
         self.last_observed_snr = 0.0
         self.gain_adjust_count = 0
+        self.last_snr_report_time = time.time()  # 上次收到 SNR 报告的时间
+        self.snr_report_timeout = 1.0  # SNR 报告超时阈值 (秒)，原5.0，5倍加速
+        self.reconnect_gain_boost = 0.1  # 断联时增益提升量
         
         # 可靠性实验参数
         self.p_node = 1.0              # 当前节点可信度 (默认完美)
@@ -130,13 +133,15 @@ class FollowerReliability:
             'yes_votes': 0,
             'no_votes': 0,
         }
+        self.voted_requests = {}  # {request_id: vote_success} 记录已投票的请求
+        self.max_voted_cache = 100  # 最多缓存 100 个请求 ID
         
         # 邻居记录
         self.peers: Dict[int, dict] = {}
         
         # 配置
         self.snr_threshold = 0.0
-        self.status_interval = 2.0
+        self.status_interval = 0.4  # 原2.0，5倍加速
         
         # 统计
         self.stats = {
@@ -155,7 +160,7 @@ class FollowerReliability:
         
         # 控制 socket
         self.ctrl_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.ctrl_sock.settimeout(1.0)
+        self.ctrl_sock.settimeout(0.2)  # 原1.0，5倍加速
         
         print(f"👥 [节点 {node_id}] FOLLOWER (可靠性实验版)")
         print(f"   TX:{tx_port} RX:{rx_port} Ctrl:{ctrl_port}")
@@ -188,20 +193,36 @@ class FollowerReliability:
                     print(f"🎯 [目标SNR更新] {self.target_snr:.1f} -> {msg.target_snr:.1f} dB")
                     self.target_snr = msg.target_snr
             
-            # ===== 伯努利投票 (无状态) =====
-            # 收到 APPEND 消息说明 SNR 足够、通信层成功
-            # 纯粹基于 p_node 决定投票结果
-            rand_val = random.random()
-            if rand_val < self.p_node:
-                # 传感器正常 -> 赞成 (success=True)
-                vote_success = True
-                self.vote_stats['yes_votes'] += 1
-            else:
-                # 传感器故障 -> 反对 (success=False)
-                vote_success = False
-                self.vote_stats['no_votes'] += 1
+            # 获取 vote_request_id
+            request_id = getattr(msg, 'vote_request_id', 0)
             
-            self.vote_stats['total_votes'] += 1
+            # ===== 检查是否已经投过票 =====
+            if request_id > 0 and request_id in self.voted_requests:
+                # 已投过票，重发之前的投票结果 (不重新投票)
+                vote_success = self.voted_requests[request_id]
+            else:
+                # ===== 伯努利投票 (无状态) =====
+                # 收到 APPEND 消息说明 SNR 足够、通信层成功
+                # 纯粹基于 p_node 决定投票结果
+                rand_val = random.random()
+                if rand_val < self.p_node:
+                    # 传感器正常 -> 赞成 (success=True)
+                    vote_success = True
+                    self.vote_stats['yes_votes'] += 1
+                else:
+                    # 传感器故障 -> 反对 (success=False)
+                    vote_success = False
+                    self.vote_stats['no_votes'] += 1
+                
+                self.vote_stats['total_votes'] += 1
+                
+                # 记录已投票的请求
+                if request_id > 0:
+                    self.voted_requests[request_id] = vote_success
+                    # 清理旧缓存
+                    if len(self.voted_requests) > self.max_voted_cache:
+                        oldest = min(self.voted_requests.keys())
+                        del self.voted_requests[oldest]
             
             # 获取收到的日志 index (用于回复)
             received_log_index = 0
@@ -217,7 +238,8 @@ class FollowerReliability:
                 sender_id=self.node_id,
                 success=vote_success,
                 last_log_index=received_log_index,  # 关键变化!
-                vote_request_id=msg.vote_request_id
+                vote_request_id=msg.vote_request_id,
+                phy_state=PhyState(snr=self.last_observed_snr)  # 包含当前 SNR，用于加权投票
             )
             
             # 无条件追加日志 (不检查索引是否连续)
@@ -254,8 +276,11 @@ class FollowerReliability:
         # 查找自己的 SNR
         my_snr = msg.snr_report.get(self.node_id, None)
         if my_snr is None:
+            # Leader 没有报告我的 SNR，说明可能断联
             return
         
+        # 只有找到自己的 SNR 才更新时间戳
+        self.last_snr_report_time = time.time()
         self.last_observed_snr = my_snr
         
         # 计算偏差并调整增益
@@ -348,15 +373,38 @@ class FollowerReliability:
         """主循环"""
         print("🟢 主循环启动")
         last_status = time.time()
+        last_reconnect_attempt = time.time()
         
         while self.running:
             now = time.time()
+            
+            # 检测 SNR 报告超时 (可能断联)
+            time_since_snr = now - self.last_snr_report_time
+            if time_since_snr > self.snr_report_timeout:
+                # 断联超过阈值，尝试提升增益
+                if now - last_reconnect_attempt >= self.snr_report_timeout:
+                    self._try_reconnect()
+                    last_reconnect_attempt = now
             
             if now - last_status >= self.status_interval:
                 self._print_status()
                 last_status = now
             
             time.sleep(0.05)
+    
+    def _try_reconnect(self):
+        """尝试恢复连接：增加 TX 增益"""
+        with self.lock:
+            old_gain = self.current_tx_gain
+            new_gain = min(self.max_gain, self.current_tx_gain + self.reconnect_gain_boost)
+            
+            if new_gain > old_gain:
+                self.current_tx_gain = new_gain
+                success = self._set_phy_tx_gain(new_gain)
+                status = "✅" if success else "❌"
+                print(f"🔄 [断联恢复] 未收到 SNR 报告，尝试提升增益: {old_gain:.3f} -> {new_gain:.3f} {status}")
+            else:
+                print(f"⚠️ [断联] 增益已达上限 {self.max_gain:.3f}，等待 Leader 恢复...")
     
     def _print_status(self):
         """打印状态"""
@@ -405,7 +453,7 @@ def main():
     parser.add_argument("--snr-tolerance", type=float, default=2.0, help="SNR 容差")
     parser.add_argument("--init-gain", type=float, default=0.5, help="初始 TX 增益")
     parser.add_argument("--p-node", type=float, default=1.0, help="初始节点可信度")
-    parser.add_argument("--status-interval", type=float, default=2.0, help="状态打印间隔")
+    parser.add_argument("--status-interval", type=float, default=0.4, help="状态打印间隔 (5倍加速)")
     args = parser.parse_args()
     
     node = FollowerReliability(

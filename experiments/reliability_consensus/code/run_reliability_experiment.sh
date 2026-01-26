@@ -7,7 +7,10 @@
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# 项目根目录 (脚本在 experiments/reliability_consensus/code/ 下)
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# 实验代码目录
+EXPERIMENT_DIR="$SCRIPT_DIR"
 
 # SDR 配置 (根据实际硬件调整)
 # PC1: 4 台 E200
@@ -22,9 +25,9 @@ NODE_IDS=(1 2 3 4)
 
 # 增益配置
 LEADER_TX_GAIN=${1:-0.8}
-LEADER_RX_GAIN=${2:-0.9}
+LEADER_RX_GAIN=${2:-0.95}
 FOLLOWER_TX_GAIN=${3:-0.5}
-FOLLOWER_RX_GAIN=${4:-0.9}
+FOLLOWER_RX_GAIN=${4:-0.95}
 
 # 端口配置
 APP_TX_PORTS=(10001 10002 10003 10004)
@@ -36,8 +39,8 @@ TOTAL_NODES=6    # 包括 PC2 上的两个节点
 LEADER_ID=1
 
 # 实验参数 (可通过命令行覆盖)
-SNR_LEVELS=${5:-"20.0,8.0"}
-P_NODE_LEVELS=${6:-"0.6,0.7,0.8,0.9,1.0"}
+SNR_LEVELS=${5:-"16.0,6.0"}
+P_NODE_LEVELS=${6:-"0.6,0.7,0.8,0.9"}
 N_LEVELS=${7:-"1,2,3,4,5,6"}
 ROUNDS=${8:-50}
 VOTE_DEADLINE=${9:-0.5}
@@ -133,11 +136,12 @@ for i in "${!NODE_IDS[@]}"; do
     
     python3 $PROJECT_DIR/scripts/core/v2v_hw_phy.py \
         --sdr-args "$sdr_arg" \
-        --tx-port $rx_port \
-        --rx-port $tx_port \
+        --udp-recv-port $tx_port \
+        --udp-send-port $rx_port \
         --ctrl-port $ctrl_port \
         --tx-gain $tx_gain \
         --rx-gain $rx_gain \
+        --no-gui \
         &
     
     sleep 2
@@ -205,7 +209,7 @@ for node_id in "${NODE_IDS[@]}"; do
             -e bash -c "
                 echo '=== $title ==='
                 echo 'PHY 已就绪，启动实验 Leader...'
-                python3 $PROJECT_DIR/scripts/app/raft_leader_reliability.py \
+                python3 $EXPERIMENT_DIR/raft_leader_reliability.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \
@@ -232,13 +236,13 @@ for node_id in "${NODE_IDS[@]}"; do
             -e bash -c "
                 echo '=== $title ==='
                 echo 'PHY 已就绪，启动 Follower...'
-                python3 $PROJECT_DIR/scripts/app/raft_follower_reliability.py \
+                python3 $EXPERIMENT_DIR/raft_follower_reliability.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \
                     --rx $rx_port \
                     --ctrl $ctrl_port \
-                    --target-snr 20.0 \
+                    --target-snr 16.0 \
                     --init-gain $FOLLOWER_TX_GAIN \
                     --p-node 1.0 \
                     --status-interval 5.0
@@ -262,7 +266,7 @@ echo "          --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \\"
 echo "          --tx-gain 0.5 --rx-gain 0.9"
 echo ""
 echo "   2. 启动 Follower:"
-echo "      python3 scripts/app/raft_follower_reliability.py \\"
+echo "      python3 experiments/reliability_consensus/code/raft_follower_reliability.py \\"
 echo "          --id 5 --total 6 --tx 10005 --rx 20005 --ctrl 9005"
 echo ""
 echo "⌨️  在 Leader 窗口按 Enter 开始实验"
