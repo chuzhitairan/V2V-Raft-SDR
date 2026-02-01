@@ -140,7 +140,7 @@ def plot_single_result(data, output_dir=None):
     # 其中 n+1 是总节点数（含 Leader）
     try:
         from scipy.special import comb
-        p_theory = np.linspace(0.5, 1.0, 100)
+        p_theory = np.linspace(0.55, 1.05, 100)
         total_nodes = n + 1  # 含 Leader
         threshold = (total_nodes + 1) // 2  # 多数阈值
         
@@ -152,19 +152,39 @@ def plot_single_result(data, output_dir=None):
                 alpha=0.8, label=f'Theory (Binomial, $n={n}$)')
     except ImportError:
         print("⚠️ scipy 未安装，跳过理论曲线")
-    
-    # n=1 基准线
-    ax.plot([0.5, 1.0], [0.5, 1.0], 'k:', linewidth=1.5, alpha=0.5,
-            label='Baseline ($n=1$)')
-    
+
+    # 基线：单节点可靠性（期望） - 绘制一次并放在图例底部
+    baseline_label = 'Single-node Reliability (Expected)'
+    ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
+            label=baseline_label)
+
     ax.set_xlabel('Node Reliability ($p_{node}$)', fontsize=16)
     ax.set_ylabel('System Reliability ($P_{sys}$)', fontsize=16)
     ax.set_title(f'Reliability Experiment: SNR = {snr} dB, n = {n}', fontsize=14)
     ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.set_xlim(0.55, 1.02)
-    ax.set_ylim(0, 1.05)
+    ax.set_xlim(0.55, 1.05)
+    ax.set_ylim(0.55, 1.05)
+    # x/y ticks show 0.6..1.0 (step 0.1); do not label the left edge 0.55
+    ax.set_xticks(np.arange(0.6, 1.01, 0.1))
+    ax.set_yticks(np.arange(0.6, 1.01, 0.1))
     ax.grid(True, alpha=0.3)
-    ax.legend(loc='lower right', frameon=True, fontsize=12)
+    # 去重 legend，避免重复标签，并把基线移动到底部
+    handles, labels = ax.get_legend_handles_labels()
+    unique = {}
+    new_h, new_l = [], []
+    for h, l in zip(handles, labels):
+        if l not in unique:
+            unique[l] = True
+            new_h.append(h)
+            new_l.append(l)
+    # Move baseline to end if present
+    if baseline_label in new_l and new_l[-1] != baseline_label:
+        idx = new_l.index(baseline_label)
+        bl_h = new_h.pop(idx)
+        bl_l = new_l.pop(idx)
+        new_h.append(bl_h)
+        new_l.append(bl_l)
+    ax.legend(new_h, new_l, loc='lower right', frameon=True, fontsize=12)
     
     plt.tight_layout()
     
@@ -193,7 +213,8 @@ def plot_single_result(data, output_dir=None):
     ax.set_ylabel('Effective Scale (nodes)', fontsize=16)
     ax.set_title(f'Effective Scale: SNR = {snr} dB, n = {n}', fontsize=14)
     ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.set_xlim(0.55, 1.02)
+    ax.set_xlim(0.5, 0.99)
+    ax.set_xticks(np.arange(0.5, 1.0, 0.1))
     ax.set_ylim(0, n + 1)
     ax.grid(True, alpha=0.3)
     ax.legend(loc='lower right', frameon=True, fontsize=12)
@@ -231,41 +252,84 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
         snr_groups = {}
         for data in data_list:
             snr = data['snr']
-            if snr not in snr_groups:
-                snr_groups[snr] = []
-            snr_groups[snr].append(data)
-        
+            snr_groups.setdefault(snr, []).append(data)
+
         for snr, group in snr_groups.items():
             fig, ax = plt.subplots(figsize=(10, 7))
-            
+
             # 按 n 排序
             group_sorted = sorted(group, key=lambda x: x['n'])
-            
+
+            ax2 = None
             for i, data in enumerate(group_sorted):
                 n = data['n']
                 results = sorted(data['results'], key=lambda x: x['p_node'])
-                
+
                 p_nodes = [r['p_node'] for r in results]
                 p_sys_values = [r['p_sys'] for r in results]
-                
+
                 ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=9,
-                       color=colors[i % len(colors)], label=f'$n = {n}$')
-            
-            # 基准线
-            ax.plot([0.5, 1.0], [0.5, 1.0], 'k:', linewidth=1.5, alpha=0.5,
-                   label='Baseline ($n=1$)')
-            
+                        color=colors[i % len(colors)], label=f'$n = {n}$')
+
+                # 叠加虚线：系统增益 Gain = P_sys - p_node，绘制在右侧 y 轴
+                if ax2 is None:
+                    ax2 = ax.twinx()
+                    ax2.set_ylabel('System Gain (P_sys - p_node)', fontsize=12)
+                gain = np.array(p_sys_values) - np.array(p_nodes)
+                # 只为第一条增益曲线添加 legend 标签，其他保持不重复
+                gain_label = 'System Gain (dashed)'
+                g_label = gain_label if i == 0 else '_nolegend_'
+                ax2.plot(p_nodes, gain, '--', linewidth=1.5, markersize=6,
+                         color=colors[i % len(colors)], alpha=0.8, label=g_label)
+                # 绘制零线（只绘制一次）
+                if i == 0:
+                    ax2.axhline(0.0, color='gray', linestyle=':', linewidth=1.0, alpha=0.6)
+
+                # 基线：单节点可靠性（期望） - 绘制一次
+                baseline_label = 'Single-node Reliability (Expected)'
+                ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
+                    label=baseline_label)
+
             ax.set_xlabel('Node Reliability ($p_{node}$)', fontsize=18)
             ax.set_ylabel('System Reliability ($P_{sys}$)', fontsize=18)
             ax.set_title(f'Reliability Comparison: SNR = {snr} dB', fontsize=16)
             ax.tick_params(axis='both', which='major', labelsize=14)
-            ax.set_xlim(0.55, 1.02)
-            ax.set_ylim(0, 1.05)
+            ax.set_xlim(0.55, 1.05)
+            ax.set_xticks(np.arange(0.6, 1.01, 0.1))
+            ax.set_ylim(0.55, 1.05)
+            ax.set_yticks(np.arange(0.6, 1.01, 0.1))
             ax.grid(True, alpha=0.3)
-            ax.legend(loc='lower right', frameon=True, fontsize=14)
-            
+            # 如果存在右轴（增益），设置固定显示范围并合并 legend 条目（去重）
+            if ax2 is not None:
+                ax2.set_ylim(-0.2, 0.2)
+                ax2.set_yticks(np.arange(-0.2, 0.21, 0.1))
+            # 合并左右两个坐标轴的 legend 条目（去重）
+            handles, labels = ax.get_legend_handles_labels()
+            if ax2 is not None:
+                h2, l2 = ax2.get_legend_handles_labels()
+                handles += h2
+                labels += l2
+            unique = {}
+            new_h, new_l = [], []
+            for h, l in zip(handles, labels):
+                if l not in unique:
+                    unique[l] = True
+                    new_h.append(h)
+                    new_l.append(l)
+            # ensure baseline is last
+            if baseline_label in new_l and new_l[-1] != baseline_label:
+                idx = new_l.index(baseline_label)
+                bl_h = new_h.pop(idx)
+                bl_l = new_l.pop(idx)
+                new_h.append(bl_h)
+                new_l.append(bl_l)
+            ax.legend(new_h, new_l, loc='lower right', frameon=True, fontsize=14)
+            # 在底部添加说明：虚线表示系统增益（P_sys - p_node）
+            ax.text(0.5, 0.02, 'Dashed lines: System Gain = $P_{sys}-p_{node}$ (right axis)',
+                    transform=ax.transAxes, ha='center', va='bottom', fontsize=10, alpha=0.8)
+
             plt.tight_layout()
-            
+
             filename = os.path.join(output_dir, f'plot_compare_snr{snr:.0f}_by_n_{timestamp}.png')
             plt.savefig(filename, dpi=150, bbox_inches='tight')
             print(f"[保存] {filename}")
@@ -276,44 +340,60 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
         n_groups = {}
         for data in data_list:
             n = data['n']
-            if n not in n_groups:
-                n_groups[n] = []
-            n_groups[n].append(data)
-        
+            n_groups.setdefault(n, []).append(data)
+
         for n, group in n_groups.items():
             fig, ax = plt.subplots(figsize=(10, 7))
-            
+
             # 按 SNR 排序
             group_sorted = sorted(group, key=lambda x: x['snr'], reverse=True)
-            
+
             snr_colors = {16.0: '#1f77b4', 6.0: '#d62728', 20.0: '#2ca02c', 10.0: '#ff7f0e'}
-            
+
             for i, data in enumerate(group_sorted):
                 snr = data['snr']
                 results = sorted(data['results'], key=lambda x: x['p_node'])
-                
+
                 p_nodes = [r['p_node'] for r in results]
                 p_sys_values = [r['p_sys'] for r in results]
-                
+
                 color = snr_colors.get(snr, colors[i % len(colors)])
                 ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=9,
-                       color=color, label=f'SNR = {snr} dB')
-            
-            # 基准线
-            ax.plot([0.5, 1.0], [0.5, 1.0], 'k:', linewidth=1.5, alpha=0.5,
-                   label='Baseline ($n=1$)')
-            
+                    color=color, label=f'SNR = {snr} dB')
+
+                # 基线：单节点可靠性（期望） - 绘制一次
+                baseline_label = 'Single-node Reliability (Expected)'
+                ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
+                    label=baseline_label)
+
             ax.set_xlabel('Node Reliability ($p_{node}$)', fontsize=18)
             ax.set_ylabel('System Reliability ($P_{sys}$)', fontsize=18)
             ax.set_title(f'Reliability Comparison: $n = {n}$', fontsize=16)
             ax.tick_params(axis='both', which='major', labelsize=14)
-            ax.set_xlim(0.55, 1.02)
-            ax.set_ylim(0, 1.05)
+            ax.set_xlim(0.55, 1.05)
+            ax.set_xticks(np.arange(0.6, 1.01, 0.1))
+            ax.set_ylim(0.55, 1.05)
+            ax.set_yticks(np.arange(0.6, 1.01, 0.1))
             ax.grid(True, alpha=0.3)
-            ax.legend(loc='lower right', frameon=True, fontsize=14)
-            
+            handles, labels = ax.get_legend_handles_labels()
+            unique = {}
+            new_h, new_l = [], []
+            for h, l in zip(handles, labels):
+                if l not in unique:
+                    unique[l] = True
+                    new_h.append(h)
+                    new_l.append(l)
+            # ensure baseline is last
+            if baseline_label in new_l and new_l[-1] != baseline_label:
+                idx = new_l.index(baseline_label)
+                bl_h = new_h.pop(idx)
+                bl_l = new_l.pop(idx)
+                new_h.append(bl_h)
+                new_l.append(bl_l)
+            ax.legend(new_h, new_l, loc='lower right', frameon=True, fontsize=14)
+
             plt.tight_layout()
-            
+
             filename = os.path.join(output_dir, f'plot_compare_n{n}_by_snr_{timestamp}.png')
             plt.savefig(filename, dpi=150, bbox_inches='tight')
             print(f"[保存] {filename}")
@@ -332,9 +412,6 @@ def print_summary(data):
     print(f"SNR: {snr} dB")
     print(f"Follower 数量 (n): {n}")
     print(f"每组测试轮数: {data.get('rounds_per_config', 'N/A')}")
-    print(f"p_node 等级: {data.get('p_node_levels', 'N/A')}")
-    print("-" * 60)
-    
     print(f"\n{'p_node':<10} {'P_sys':<10} {'有效规模':<20} {'成功/总数':<15}")
     print("-" * 60)
     
