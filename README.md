@@ -22,7 +22,7 @@
 
 ## 📂 项目结构
 
-\`\`\`text
+```text
 V2V-Raft-SDR/
 ├── README.md                  # 项目说明书 (本文件)
 ├── docs/                      # 文档目录
@@ -55,7 +55,7 @@ V2V-Raft-SDR/
 └── grc/                       # GNU Radio Companion 流图文件
     ├── v2v_sim_hub.py.grc     # 仿真基站流图
     └── v2v_hw_phy.py.grc      # 硬件基站流图
-\`\`\`
+```
 
 ---
 
@@ -67,17 +67,17 @@ V2V-Raft-SDR/
 
 #### 1. 启动虚拟信道
 
-\`\`\`bash
+```bash
 # 使用轻量级 Hub (推荐，启动快)
 python3 core/sim_hub_lite.py --nodes 5
 
 # 或使用完整 GNU Radio Hub (需要 GUI)
 python3 core/v2v_sim_hub.py
-\`\`\`
+```
 
 #### 2. 启动 Raft 节点
 
-\`\`\`bash
+```bash
 # 终端 1 (Leader)
 python3 experiments/reliability_consensus/code/raft_leader_reliability.py \
     --id 1 --total 5 --tx 50000 --rx 50001
@@ -86,7 +86,7 @@ python3 experiments/reliability_consensus/code/raft_leader_reliability.py \
 python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
     --id 2 --total 5 --tx 50000 --rx 50002
 # ... 依次启动节点 3-5 (--rx 50003 到 50005)
-\`\`\`
+```
 
 #### 3. 验证功能
 
@@ -97,7 +97,7 @@ python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
 
 使用两台 **ANTSDR E200** 进行真实通信。详见 [硬件操作指南](docs/HARDWARE_OPERATION_GUIDE.md)。
 
-\`\`\`bash
+```bash
 # 终端 1: SDR A (IP .10)
 sudo python3 core/v2v_hw_phy.py \
     --sdr-args "addr=192.168.1.10" \
@@ -114,7 +114,7 @@ python3 experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
 
 python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
     --id 2 --total 2 --tx 10002 --rx 20002
-\`\`\`
+```
 
 ---
 
