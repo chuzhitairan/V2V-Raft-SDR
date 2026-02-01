@@ -2,8 +2,8 @@
 从 CSV 文件绘制 Benchmark 图表
 
 用法:
-    python3 scripts/app/plot_csv.py results/benchmark_results.csv
-    python3 scripts/app/plot_csv.py results/benchmark_results.csv --output results/my_plot.png
+    python3 experiments/pre_test/plot_csv.py results/benchmark_results.csv
+    python3 experiments/pre_test/plot_csv.py results/benchmark_results.csv --output results/my_plot.png
 """
 
 import argparse
@@ -308,9 +308,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-    python3 scripts/app/plot_csv.py results/benchmark_results.csv
-    python3 scripts/app/plot_csv.py results/benchmark_results.csv --output results/my_plot.png
-    python3 scripts/app/plot_csv.py results/benchmark_results.csv --no-show
+    python3 experiments/pre_test/plot_csv.py results/benchmark_results.csv
+    python3 experiments/pre_test/plot_csv.py results/benchmark_results.csv --output results/my_plot.png
+    python3 experiments/pre_test/plot_csv.py results/benchmark_results.csv --no-show
         """
     )
     

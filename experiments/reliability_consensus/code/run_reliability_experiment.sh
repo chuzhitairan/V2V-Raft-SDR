@@ -134,7 +134,7 @@ for i in "${!NODE_IDS[@]}"; do
     
     echo "   启动 Node $node_id PHY ($role)"
     
-    python3 $PROJECT_DIR/scripts/core/v2v_hw_phy.py \
+    python3 $PROJECT_DIR/core/v2v_hw_phy.py \
         --sdr-args "$sdr_arg" \
         --udp-recv-port $tx_port \
         --udp-send-port $rx_port \
@@ -261,8 +261,8 @@ echo "可靠性共识实验节点已启动！"
 echo ""
 echo "📋 PC2 手动启动说明 (Node 5, 6):"
 echo "   1. 启动 PHY:"
-echo "      python3 scripts/core/v2v_hw_phy.py --sdr-args 'addr=...' \\"
-echo "          --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \\"
+echo "      python3 core/v2v_hw_phy.py --sdr-args 'addr=...' \\"
+echo "          --udp-recv-port 10005 --udp-send-port 20005 --ctrl-port 9005 \\"
 echo "          --tx-gain 0.5 --rx-gain 0.9"
 echo ""
 echo "   2. 启动 Follower:"

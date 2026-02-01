@@ -60,7 +60,7 @@ cd /home/chuzhitairan/V2V-Raft-SDR
 ### PC2 (手动启动 Node 5, 6)
 ```bash
 # Node 5 PHY
-python3 scripts/core/v2v_hw_phy.py --sdr-args 'addr=...' \
+python3 core/v2v_hw_phy.py --sdr-args 'addr=...' \
     --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \
     --tx-gain 0.5 --rx-gain 0.9
 

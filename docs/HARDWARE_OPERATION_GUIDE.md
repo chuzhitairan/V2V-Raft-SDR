@@ -8,7 +8,6 @@
 - [端口规划](#端口规划)
 - [手动启动（2节点示例）](#手动启动2节点示例)
 - [手动启动（3节点示例）](#手动启动3节点示例)
-- [一键启动脚本](#一键启动脚本)
 - [E200 vs U200 注意事项](#e200-vs-u200-注意事项)
 - [故障排除](#故障排除)
 
@@ -77,7 +76,7 @@ Device Address:
 
 ## 手动启动（2节点示例）
 
-**场景**：1 台电脑 + 1 台 E200 + 1 台 U200
+**场景**：1 台电脑 + 2 台 E200
 
 ### 步骤 1：识别设备
 
@@ -85,16 +84,14 @@ Device Address:
 uhd_find_devices
 ```
 
-记录下：
-- E200 的 IP 地址（如 `192.168.1.10`）
-- U200 的序列号（如 `316B611`）
+记录下 E200 的 IP 地址（如 `192.168.1.10` 和 `192.168.1.11`）。
 
 ### 步骤 2：启动 PHY 层
 
-**终端 1 - Node 1 (E200) PHY：**
+**终端 1 - Node 1 PHY：**
 
 ```bash
-python3 scripts/core/v2v_hw_phy.py \
+sudo python3 core/v2v_hw_phy.py \
     --sdr-args "addr=192.168.1.10" \
     --udp-recv-port 10001 \
     --udp-send-port 20001 \
@@ -103,12 +100,11 @@ python3 scripts/core/v2v_hw_phy.py \
     --rx-gain 0.5
 ```
 
-**终端 2 - Node 2 (U200) PHY：**
+**终端 2 - Node 2 PHY：**
 
 ```bash
-# 注意：U200 可能需要 sudo 权限
-sudo python3 scripts/core/v2v_hw_phy.py \
-    --sdr-args "serial=316B611" \
+sudo python3 core/v2v_hw_phy.py \
+    --sdr-args "addr=192.168.1.11" \
     --udp-recv-port 10002 \
     --udp-send-port 20002 \
     --ctrl-port 9002 \
@@ -116,30 +112,26 @@ sudo python3 scripts/core/v2v_hw_phy.py \
     --rx-gain 0.5
 ```
 
-> ⚠️ **注意**：U200 通过 USB 初始化需要加载固件，可能需要 5-10 秒，请耐心等待直到看到 GUI 窗口。
-
 ### 步骤 3：启动 Raft 应用层
 
-**终端 3 - Node 1 Raft：**
+**终端 3 - Node 1 (Leader)：**
 
 ```bash
-python3 scripts/app/raft_node.py \
+python3 experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
     --id 1 \
     --total 2 \
     --tx 10001 \
-    --rx 20001 \
-    --snr-threshold 5.0
+    --rx 20001
 ```
 
-**终端 4 - Node 2 Raft：**
+**终端 4 - Node 2 (Follower)：**
 
 ```bash
-python3 scripts/app/raft_node.py \
+python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
     --id 2 \
     --total 2 \
     --tx 10002 \
-    --rx 20002 \
-    --snr-threshold 5.0
+    --rx 20002
 ```
 
 ### 步骤 4：验证运行
@@ -179,61 +171,32 @@ python3 scripts/app/raft_node.py \
 
 ```bash
 # 终端 1
-python3 scripts/core/v2v_hw_phy.py --sdr-args "addr=192.168.1.10" \
+sudo python3 core/v2v_hw_phy.py --sdr-args "addr=192.168.1.10" \
     --udp-recv-port 10001 --udp-send-port 20001
 
 # 终端 2
-python3 scripts/core/v2v_hw_phy.py --sdr-args "addr=192.168.1.11" \
+sudo python3 core/v2v_hw_phy.py --sdr-args "addr=192.168.1.11" \
     --udp-recv-port 10002 --udp-send-port 20002
 
 # 终端 3
-python3 scripts/core/v2v_hw_phy.py --sdr-args "addr=192.168.1.12" \
+sudo python3 core/v2v_hw_phy.py --sdr-args "addr=192.168.1.12" \
     --udp-recv-port 10003 --udp-send-port 20003
 ```
 
 **Raft 应用层（3 个终端）：**
 
 ```bash
-# 终端 4
-python3 scripts/app/raft_node.py --id 1 --total 3 --tx 10001 --rx 20001
+# 终端 4 (Leader)
+python3 experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
+    --id 1 --total 3 --tx 10001 --rx 20001
 
-# 终端 5
-python3 scripts/app/raft_node.py --id 2 --total 3 --tx 10002 --rx 20002
+# 终端 5 (Follower)
+python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
+    --id 2 --total 3 --tx 10002 --rx 20002
 
-# 终端 6
-python3 scripts/app/raft_node.py --id 3 --total 3 --tx 10003 --rx 20003
-```
-
----
-
-## 一键启动脚本
-
-### 3 节点 E200 网络
-
-编辑 `scripts/run_3node_hw.sh` 中的 SDR 配置：
-
-```bash
-# 全部 E200 (以太网)
-SDR_ARGS=("addr=192.168.1.10" "addr=192.168.1.11" "addr=192.168.1.12")
-```
-
-运行：
-
-```bash
-./scripts/run_3node_hw.sh
-```
-
-### 混合网络（E200 + U200）
-
-```bash
-# 混合配置
-SDR_ARGS=("addr=192.168.1.10" "addr=192.168.1.11" "serial=316B611")
-```
-
-### 自定义参数
-
-```bash
-./scripts/run_3node_hw.sh --tx-gain 0.6 --snr-threshold 10
+# 终端 6 (Follower)
+python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
+    --id 3 --total 3 --tx 10003 --rx 20003
 ```
 
 ---
@@ -271,7 +234,7 @@ U200/B200 需要 USB 访问权限。
 **方法 1：使用 sudo**
 
 ```bash
-sudo python3 scripts/core/v2v_hw_phy.py --sdr-args "serial=316B611" ...
+sudo python3 core/v2v_hw_phy.py --sdr-args "serial=316B611" ...
 ```
 
 **方法 2：配置 udev 规则（推荐）**
@@ -298,8 +261,6 @@ sudo udevadm trigger
 |------|------------|
 | E200 | 1-2 秒 |
 | U200 | 5-10 秒（需加载固件到 FPGA）|
-
-启动脚本中已设置 2 秒间隔，如果使用 U200 可能需要增加等待时间。
 
 ---
 
@@ -348,24 +309,13 @@ Error: usb open failed: LIBUSB_ERROR_ACCESS
 ### PHY 层命令
 
 ```bash
-python3 scripts/core/v2v_hw_phy.py \
+sudo python3 core/v2v_hw_phy.py \
     --sdr-args "addr=192.168.1.10"  # 或 "serial=316B611"
     --udp-recv-port 10001           # 接收来自 App 的数据
     --udp-send-port 20001           # 发送数据到 App
     --ctrl-port 9001                # 控制端口
-    --tx-gain 0.5                  # 发射增益 (0.0-1.0)
-    --rx-gain 0.5                  # 接收增益 (0.0-1.0)
-```
-
-### Raft 应用层命令
-
-```bash
-python3 scripts/app/raft_node.py \
-    --id 1                          # 节点 ID
-    --total 3                       # 集群总节点数
-    --tx 10001                      # 发送端口 (对应 PHY 的 recv)
-    --rx 20001                      # 接收端口 (对应 PHY 的 send)
-    --snr-threshold 5.0             # SNR 过滤阈值 (dB)
+    --tx-gain 0.5                   # 发射增益 (0.0-1.0)
+    --rx-gain 0.5                   # 接收增益 (0.0-1.0)
 ```
 
 ### 运行时增益调整
@@ -380,3 +330,7 @@ echo '{"cmd":"set_rx_gain","value":0.5}' | nc -u 127.0.0.1 9001
 # 查询当前增益
 echo '{"cmd":"get_gains"}' | nc -u -w1 127.0.0.1 9001
 ```
+
+---
+
+*最后更新: 2026-02-01*

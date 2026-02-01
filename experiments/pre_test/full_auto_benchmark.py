@@ -5,13 +5,13 @@
 
 使用方法:
     1. 终端 1 启动 SDR (一次性):
-       sudo python3 scripts/core/v2v_hw_phy.py \\
-           --serial-num "addr=192.168.1.10" \\
+       python3 core/v2v_hw_phy.py \\
+           --sdr-args "addr=192.168.1.10" \\
            --tx-gain 0.5 --rx-gain 0.5 \\
            --ctrl-port 9999
     
     2. 终端 2 运行自动测试:
-       python3 scripts/app/full_auto_benchmark.py \\
+       python3 experiments/pre_test/full_auto_benchmark.py \\
            --rx-gain 0.5 \\
            --tx-range 0.1 0.9 0.1 \\
            --packets 200
@@ -428,12 +428,12 @@ def main():
         epilog="""
 示例:
   # 扫描 TX Gain 0.1 到 0.9
-  python3 scripts/app/full_auto_benchmark.py \\
+  python3 experiments/pre_test/full_auto_benchmark.py \\
       --rx-gain 0.5 \\
       --tx-range 0.1 0.9 0.1 \\
       --packets 200
 
-注意: 先启动 v2v_hw_phy.py 并确保 --ctrl-port 9999
+注意: 先启动 core/v2v_hw_phy.py 并确保 --ctrl-port 9999
         """
     )
     
@@ -494,7 +494,7 @@ def main():
     print("\n🔗 检查 SDR 连接...")
     if not controller.ping():
         print("❌ 无法连接到 v2v_hw_phy.py")
-        print("   请确保已启动: sudo python3 scripts/core/v2v_hw_phy.py --ctrl-port 9999")
+        print("   请确保已启动: python3 core/v2v_hw_phy.py --ctrl-port 9999")
         return
     print("✅ SDR 连接正常")
     

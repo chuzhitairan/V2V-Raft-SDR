@@ -12,6 +12,9 @@ from PyQt5 import Qt
 from gnuradio import qtgui
 import os
 import sys
+
+# 添加 core 目录到搜索路径，确保能导入 wifi_phy_hier
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
 
 from PyQt5 import QtCore
@@ -22,13 +25,12 @@ from gnuradio.filter import firdes
 from gnuradio import gr
 from gnuradio.fft import window
 import signal
-from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import gr, pdu
 from gnuradio import network
-from scripts.core.wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
+from wifi_phy_hier import wifi_phy_hier  # grc-generated hier_block
 import foo
 import ieee802_11
 import sip

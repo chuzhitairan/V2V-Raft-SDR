@@ -7,10 +7,10 @@ RTT (Round-Trip Time) 测量工具
 
 用法:
     # 先启动 SDR PHY
-    sudo python3 scripts/core/v2v_hw_phy.py --serial-num "addr=192.168.1.10"
+    python3 core/v2v_hw_phy.py --sdr-args "addr=192.168.1.10"
     
     # 运行 RTT 测量
-    python3 scripts/app/rtt_benchmark.py --packets 100
+    python3 experiments/pre_test/rtt_benchmark.py --packets 100
 """
 
 import socket
@@ -264,16 +264,16 @@ def main():
         epilog="""
 示例:
     # 基本测试
-    python3 scripts/app/rtt_benchmark.py
+    python3 experiments/pre_test/rtt_benchmark.py
     
     # 更多包
-    python3 scripts/app/rtt_benchmark.py --packets 200
+    python3 experiments/pre_test/rtt_benchmark.py --packets 200
     
     # 更快发送
-    python3 scripts/app/rtt_benchmark.py --interval 10
+    python3 experiments/pre_test/rtt_benchmark.py --interval 10
     
     # 大包测试
-    python3 scripts/app/rtt_benchmark.py --payload 500
+    python3 experiments/pre_test/rtt_benchmark.py --payload 500
         """
     )
     

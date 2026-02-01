@@ -134,7 +134,7 @@ for i in "${!NODE_IDS[@]}"; do
     
     echo "   启动 Node $node_id PHY (增益: TX=$tx_gain, RX=$rx_gain)..."
     
-    python3 $PROJECT_DIR/scripts/core/v2v_hw_phy.py \
+    python3 $PROJECT_DIR/core/v2v_hw_phy.py \
         --sdr-args "$sdr_args" \
         --tx-gain $tx_gain \
         --rx-gain $rx_gain \
@@ -200,7 +200,7 @@ for node_id in "${NODE_IDS[@]}"; do
             -e bash -c "
                 echo '=== $title ==='
                 echo 'PHY 已就绪，启动实验 Leader...'
-                python3 $PROJECT_DIR/scripts/app/raft_leader_snr_experiment.py \
+                python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \
@@ -228,7 +228,7 @@ for node_id in "${NODE_IDS[@]}"; do
             -e bash -c "
                 echo '=== $title ==='
                 echo 'PHY 已就绪，启动实验 Follower...'
-                python3 $PROJECT_DIR/scripts/app/raft_follower_snr_experiment.py \
+                python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
                     --id $node_id \
                     --total $TOTAL_NODES \
                     --tx $tx_port \

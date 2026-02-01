@@ -11,7 +11,7 @@
     ...
 
 用法:
-    python3 scripts/core/sim_hub_lite.py [--nodes 5] [--port 50000]
+    python3 core/sim_hub_lite.py [--nodes 5] [--port 50000]
 """
 
 import socket
