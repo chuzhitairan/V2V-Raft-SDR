@@ -236,6 +236,13 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
     group_by: 'n' - 同一 SNR，对比不同 n
               'snr' - 同一 n，对比不同 SNR
     """
+    from matplotlib.lines import Line2D
+    import matplotlib.patches as mpatches
+    
+    # 使用 LaTeX 风格字体
+    plt.rcParams['mathtext.fontset'] = 'cm'
+    plt.rcParams['font.family'] = 'serif'
+    
     if output_dir is None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, '..', 'plots')
@@ -244,8 +251,17 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 颜色映射
-    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+    # 颜色映射 - 使用高对比度、打印友好的颜色
+    color_palette = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#F0E442', 
+                     '#56B4E9', '#E69F00', '#000000']
+    # 标记形状 - 便于黑白打印区分
+    marker_palette = ['o', 's', '^', 'D', 'v', 'p', 'h', '*']
+    # 虚线样式 - 不同的点划线样式
+    linestyle_palette = ['--', '-.', ':']
+    
+    # 右轴专用颜色（深灰色，与左轴黑色区分）
+    GAIN_AXIS_COLOR = '#555555'
+    LEFT_AXIS_COLOR = '#000000'
     
     if group_by == 'n':
         # 按 n 分组，同一 SNR 下对比不同 n
@@ -255,83 +271,118 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
             snr_groups.setdefault(snr, []).append(data)
 
         for snr, group in snr_groups.items():
-            fig, ax = plt.subplots(figsize=(10, 7))
+            # 创建图形，留出顶部空间放图例
+            fig, ax = plt.subplots(figsize=(8, 6))
 
             # 按 n 排序
             group_sorted = sorted(group, key=lambda x: x['n'])
+            
+            # 为每个 n 值分配颜色、标记和虚线样式
+            n_values = [d['n'] for d in group_sorted]
+            n_to_color = {n: color_palette[i % len(color_palette)] for i, n in enumerate(n_values)}
+            n_to_marker = {n: marker_palette[i % len(marker_palette)] for i, n in enumerate(n_values)}
+            n_to_dashstyle = {n: linestyle_palette[i % len(linestyle_palette)] for i, n in enumerate(n_values)}
 
-            ax2 = None
+            # 创建右轴，使用灰色强化与左轴的区分
+            ax2 = ax.twinx()
+            ax2.set_ylabel('Consensus Gain', fontsize=12, color=GAIN_AXIS_COLOR, fontweight='normal')
+            ax2.tick_params(axis='y', labelcolor=GAIN_AXIS_COLOR, labelsize=11, colors=GAIN_AXIS_COLOR)
+            ax2.spines['right'].set_color(GAIN_AXIS_COLOR)
+            ax2.spines['right'].set_linewidth(1.5)
+            
+            # 左轴使用黑色
+            ax.spines['left'].set_color(LEFT_AXIS_COLOR)
+            ax.spines['left'].set_linewidth(1.5)
+            ax.tick_params(axis='y', labelcolor=LEFT_AXIS_COLOR, colors=LEFT_AXIS_COLOR)
+            
             for i, data in enumerate(group_sorted):
                 n = data['n']
                 results = sorted(data['results'], key=lambda x: x['p_node'])
 
                 p_nodes = [r['p_node'] for r in results]
                 p_sys_values = [r['p_sys'] for r in results]
+                color = n_to_color[n]
+                marker = n_to_marker[n]
+                dashstyle = n_to_dashstyle[n]
 
-                ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=9,
-                        color=colors[i % len(colors)], label=f'$n = {n}$')
+                # 实线: 系统可靠性 P_sys
+                ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5, 
+                        marker=marker, markersize=8, color=color)
 
-                # 叠加虚线：系统增益 Gain = P_sys - p_node，绘制在右侧 y 轴
-                if ax2 is None:
-                    ax2 = ax.twinx()
-                    ax2.set_ylabel('System Gain (P_sys - p_node)', fontsize=12)
+                # 虚线: 系统增益 Gain = P_sys - p_node
+                # 使用不同的虚线样式，每个数据点都有标记
                 gain = np.array(p_sys_values) - np.array(p_nodes)
-                # 只为第一条增益曲线添加 legend 标签，其他保持不重复
-                gain_label = 'System Gain (dashed)'
-                g_label = gain_label if i == 0 else '_nolegend_'
-                ax2.plot(p_nodes, gain, '--', linewidth=1.5, markersize=6,
-                         color=colors[i % len(colors)], alpha=0.8, label=g_label)
-                # 绘制零线（只绘制一次）
-                if i == 0:
-                    ax2.axhline(0.0, color='gray', linestyle=':', linewidth=1.0, alpha=0.6)
+                ax2.plot(p_nodes, gain, linestyle=dashstyle, linewidth=1.8,
+                         marker=marker, markersize=5,
+                         color=color, alpha=0.65)
 
-                # 基线：单节点可靠性（期望） - 绘制一次
-                baseline_label = 'Single-node Reliability (Expected)'
-                ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
-                    label=baseline_label)
+            # 绘制零增益线（右轴参考线）
+            ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
 
-            ax.set_xlabel('Node Reliability ($p_{node}$)', fontsize=18)
-            ax.set_ylabel('System Reliability ($P_{sys}$)', fontsize=18)
-            ax.set_title(f'Reliability Comparison: SNR = {snr} dB', fontsize=16)
-            ax.tick_params(axis='both', which='major', labelsize=14)
-            ax.set_xlim(0.55, 1.05)
-            ax.set_xticks(np.arange(0.6, 1.01, 0.1))
-            ax.set_ylim(0.55, 1.05)
+            # 基线：单节点可靠性 P_sys = p_node
+            ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
+
+            # 坐标轴设置 - 缩减范围到数据实际范围
+            ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
+            ax.set_ylabel(r'System Reliability ($P_{\mathrm{sys}}$)', fontsize=13, color=LEFT_AXIS_COLOR)
+            ax.set_title(f'Reliability Comparison: SNR = {snr:.0f} dB', fontsize=14, fontweight='bold', pad=10)
+            ax.tick_params(axis='both', which='major', labelsize=11)
+            
+            # X轴缩减到数据实际范围
+            ax.set_xlim(0.57, 0.93)
+            ax.set_xticks(np.arange(0.6, 0.91, 0.1))
+            ax.set_ylim(0.57, 1.01)
             ax.set_yticks(np.arange(0.6, 1.01, 0.1))
-            ax.grid(True, alpha=0.3)
-            # 如果存在右轴（增益），设置固定显示范围并合并 legend 条目（去重）
-            if ax2 is not None:
-                ax2.set_ylim(-0.2, 0.2)
-                ax2.set_yticks(np.arange(-0.2, 0.21, 0.1))
-            # 合并左右两个坐标轴的 legend 条目（去重）
-            handles, labels = ax.get_legend_handles_labels()
-            if ax2 is not None:
-                h2, l2 = ax2.get_legend_handles_labels()
-                handles += h2
-                labels += l2
-            unique = {}
-            new_h, new_l = [], []
-            for h, l in zip(handles, labels):
-                if l not in unique:
-                    unique[l] = True
-                    new_h.append(h)
-                    new_l.append(l)
-            # ensure baseline is last
-            if baseline_label in new_l and new_l[-1] != baseline_label:
-                idx = new_l.index(baseline_label)
-                bl_h = new_h.pop(idx)
-                bl_l = new_l.pop(idx)
-                new_h.append(bl_h)
-                new_l.append(bl_l)
-            ax.legend(new_h, new_l, loc='lower right', frameon=True, fontsize=14)
-            # 在底部添加说明：虚线表示系统增益（P_sys - p_node）
-            ax.text(0.5, 0.02, 'Dashed lines: System Gain = $P_{sys}-p_{node}$ (right axis)',
-                    transform=ax.transAxes, ha='center', va='bottom', fontsize=10, alpha=0.8)
+            
+            # 只保留水平网格线，突出 P_sys 数值
+            ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
+            ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
+            
+            # 右轴范围
+            ax2.set_ylim(-0.03, 0.18)
+            ax2.set_yticks(np.arange(0.0, 0.16, 0.05))
+            
+            # ===== 创建统一图例（放在左上角空白处）=====
+            # 合并数据系列和线条类型说明
+            legend_handles = []
+            
+            # 数据系列（颜色+标记 = N 值，表示网络总规模）
+            for n in n_values:
+                legend_handles.append(
+                    Line2D([0], [0], color=n_to_color[n], linestyle='-', linewidth=2.5, 
+                           marker=n_to_marker[n], markersize=8,
+                           label=f'$N = {n}$')
+                )
+            
+            # 分隔（用空白占位）
+            legend_handles.append(Line2D([0], [0], color='none', label=' '))
+            
+            # 线条类型说明
+            legend_handles.append(
+                Line2D([0], [0], color='dimgray', linestyle='-', linewidth=2.5, marker='o', markersize=6,
+                       label=r'$P_{\mathrm{sys}}$ (left axis)')
+            )
+            legend_handles.append(
+                Line2D([0], [0], color='dimgray', linestyle='--', linewidth=1.8, marker='o', markersize=4,
+                       alpha=0.65, label='Gain (right axis)')
+            )
+            legend_handles.append(
+                Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
+                       label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
+            )
+            
+            # 放在左上角，半透明背景，留出呼吸空间
+            ax.legend(handles=legend_handles, loc='upper left',
+                     bbox_to_anchor=(0.02, 0.98),  # 留出padding
+                     frameon=True, fontsize=9, fancybox=True, 
+                     framealpha=0.6,  # 半透明背景
+                     edgecolor='lightgray', borderpad=0.8,
+                     labelspacing=0.35, handlelength=2.2)
 
             plt.tight_layout()
 
             filename = os.path.join(output_dir, f'plot_compare_snr{snr:.0f}_by_n_{timestamp}.png')
-            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            plt.savefig(filename, dpi=200, bbox_inches='tight')
             print(f"[保存] {filename}")
             plt.close()
     
@@ -343,59 +394,76 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
             n_groups.setdefault(n, []).append(data)
 
         for n, group in n_groups.items():
-            fig, ax = plt.subplots(figsize=(10, 7))
+            fig, ax = plt.subplots(figsize=(8, 6))
 
-            # 按 SNR 排序
+            # 按 SNR 排序（从高到低）
             group_sorted = sorted(group, key=lambda x: x['snr'], reverse=True)
-
-            snr_colors = {16.0: '#1f77b4', 6.0: '#d62728', 20.0: '#2ca02c', 10.0: '#ff7f0e'}
+            
+            # 为每个 SNR 值分配颜色和标记
+            snr_values = [d['snr'] for d in group_sorted]
+            snr_to_color = {s: color_palette[i % len(color_palette)] for i, s in enumerate(snr_values)}
+            snr_to_marker = {s: marker_palette[i % len(marker_palette)] for i, s in enumerate(snr_values)}
 
             for i, data in enumerate(group_sorted):
-                snr = data['snr']
+                snr_val = data['snr']
                 results = sorted(data['results'], key=lambda x: x['p_node'])
 
                 p_nodes = [r['p_node'] for r in results]
                 p_sys_values = [r['p_sys'] for r in results]
 
-                color = snr_colors.get(snr, colors[i % len(colors)])
-                ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=9,
-                    color=color, label=f'SNR = {snr} dB')
+                color = snr_to_color[snr_val]
+                marker = snr_to_marker[snr_val]
+                ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5,
+                        marker=marker, markersize=9, color=color)
 
-                # 基线：单节点可靠性（期望） - 绘制一次
-                baseline_label = 'Single-node Reliability (Expected)'
-                ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
-                    label=baseline_label)
+            # 基线：单节点可靠性 P_sys = p_node
+            ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
 
-            ax.set_xlabel('Node Reliability ($p_{node}$)', fontsize=18)
-            ax.set_ylabel('System Reliability ($P_{sys}$)', fontsize=18)
-            ax.set_title(f'Reliability Comparison: $n = {n}$', fontsize=16)
-            ax.tick_params(axis='both', which='major', labelsize=14)
-            ax.set_xlim(0.55, 1.05)
-            ax.set_xticks(np.arange(0.6, 1.01, 0.1))
-            ax.set_ylim(0.55, 1.05)
+            ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
+            ax.set_ylabel(r'System Reliability ($P_{\mathrm{sys}}$)', fontsize=13)
+            ax.set_title(f'Reliability Comparison: $N = {n}$ ({n+1} nodes)', fontsize=14, fontweight='bold', pad=10)
+            ax.tick_params(axis='both', which='major', labelsize=11)
+            ax.set_xlim(0.57, 0.93)
+            ax.set_xticks(np.arange(0.6, 0.91, 0.1))
+            ax.set_ylim(0.57, 1.01)
             ax.set_yticks(np.arange(0.6, 1.01, 0.1))
-            ax.grid(True, alpha=0.3)
-            handles, labels = ax.get_legend_handles_labels()
-            unique = {}
-            new_h, new_l = [], []
-            for h, l in zip(handles, labels):
-                if l not in unique:
-                    unique[l] = True
-                    new_h.append(h)
-                    new_l.append(l)
-            # ensure baseline is last
-            if baseline_label in new_l and new_l[-1] != baseline_label:
-                idx = new_l.index(baseline_label)
-                bl_h = new_h.pop(idx)
-                bl_l = new_l.pop(idx)
-                new_h.append(bl_h)
-                new_l.append(bl_l)
-            ax.legend(new_h, new_l, loc='lower right', frameon=True, fontsize=14)
+            
+            # 只保留水平网格线
+            ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
+            ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
+            
+            # ===== 创建统一图例（放在左上角空白处）=====
+            legend_handles = []
+            
+            # SNR 值
+            for s in snr_values:
+                legend_handles.append(
+                    Line2D([0], [0], color=snr_to_color[s], linestyle='-', linewidth=2.5, 
+                           marker=snr_to_marker[s], markersize=8,
+                           label=f'SNR = {s:.0f} dB')
+                )
+            
+            # 分隔
+            legend_handles.append(Line2D([0], [0], color='none', label=' '))
+            
+            # 基线说明
+            legend_handles.append(
+                Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
+                       label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
+            )
+            
+            # 放在左上角，半透明背景
+            ax.legend(handles=legend_handles, loc='upper left',
+                     bbox_to_anchor=(0.02, 0.98),
+                     frameon=True, fontsize=9, fancybox=True,
+                     framealpha=0.6,
+                     edgecolor='lightgray', borderpad=0.8,
+                     labelspacing=0.35, handlelength=2.2)
 
             plt.tight_layout()
 
             filename = os.path.join(output_dir, f'plot_compare_n{n}_by_snr_{timestamp}.png')
-            plt.savefig(filename, dpi=150, bbox_inches='tight')
+            plt.savefig(filename, dpi=200, bbox_inches='tight')
             print(f"[保存] {filename}")
             plt.close()
 
@@ -432,6 +500,8 @@ def main():
     parser.add_argument('--output-dir', '-o', help='输出目录')
     parser.add_argument('--list', '-l', action='store_true', help='列出所有可用的结果文件')
     parser.add_argument('--all', '-a', action='store_true', help='处理所有找到的结果文件')
+    parser.add_argument('--filter-n', type=str, help='只保留指定的 n 值 (逗号分隔，如 1,3,6)')
+    parser.add_argument('--filter-snr', type=str, help='只保留指定的 SNR 值 (逗号分隔，如 4,14)')
     
     args = parser.parse_args()
     
@@ -496,6 +566,21 @@ def main():
     
     if not data_list:
         print("❌ 没有成功加载任何数据")
+        return
+    
+    # 应用过滤器
+    if args.filter_n:
+        filter_n_values = set(int(x.strip()) for x in args.filter_n.split(','))
+        data_list = [d for d in data_list if d['n'] in filter_n_values]
+        print(f"🔍 过滤 n ∈ {sorted(filter_n_values)}，剩余 {len(data_list)} 个文件")
+    
+    if args.filter_snr:
+        filter_snr_values = set(float(x.strip()) for x in args.filter_snr.split(','))
+        data_list = [d for d in data_list if d['snr'] in filter_snr_values]
+        print(f"🔍 过滤 SNR ∈ {sorted(filter_snr_values)}，剩余 {len(data_list)} 个文件")
+    
+    if not data_list:
+        print("❌ 过滤后没有剩余数据")
         return
     
     if args.output_dir:

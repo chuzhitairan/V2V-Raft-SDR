@@ -24,7 +24,7 @@ snr_cluster_size/
 ## 实验配置
 - **6 节点实验**: 4 台 E200 (自动) + 2 台 U200 (手动)
 - **4 节点实验**: 4 台 E200 (自动)
-- **SNR 范围**: 24 dB → 0 dB (步长: >6dB 时 2.0, ≤6dB 时 0.5)
+- **SNR 范围**: 24 dB → 0 dB (步长: >8dB 时 2.0, ≤8dB 时 0.5)
 - **每个 SNR 测量次数**: 100 次
 - **节点在线判定**: 2 秒内收到心跳回复
 
@@ -38,7 +38,52 @@ snr_cluster_size/
 ```bash
 # 从项目根目录运行
 cd /home/chuzhitairan/V2V-Raft-SDR
-./scripts/run_snr_experiment.sh [LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR]
+
+# 启动 4 节点自动实验 (E200)
+./experiments/snr_cluster_size/code/run_snr_experiment.sh \
+	[LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR] [STATUS_INTERVAL]
+
+# 示例
+./experiments/snr_cluster_size/code/run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
+```
+
+> 说明：脚本会使用 xterm 弹出多个窗口，请确保已安装 `xterm`。
+
+## 6 节点启动方式 (4×E200 + 2×U200 手动)
+
+### PC1（自动启动 Node 1-4）
+1. 打开 [experiments/snr_cluster_size/code/run_snr_experiment.sh](experiments/snr_cluster_size/code/run_snr_experiment.sh) 并修改：
+	 - `TOTAL_NODES=6`
+	 - `NODE_IDS=(1 2 3 4)` 保持不变（PC1 只管 1-4）
+2. 运行脚本：
+```bash
+cd /home/chuzhitairan/V2V-Raft-SDR
+./experiments/snr_cluster_size/code/run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
+```
+
+### PC2（手动启动 Node 5-6）
+```bash
+cd /home/chuzhitairan/V2V-Raft-SDR
+
+# Node 5 PHY
+python3 core/v2v_hw_phy.py --sdr-args "serial=U200100" \
+	--udp-recv-port 10005 --udp-send-port 20005 \
+	--ctrl-port 9005 --tx-gain 0.7 --rx-gain 0.9 --no-gui
+
+# Node 5 Follower
+python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
+	--id 5 --total 6 --tx 10005 --rx 20005 --ctrl 9005 \
+	--target-snr 20.0 --init-gain 0.7 --status-interval 2.0
+
+# Node 6 PHY
+python3 core/v2v_hw_phy.py --sdr-args "serial=U200101" \
+	--udp-recv-port 10006 --udp-send-port 20006 \
+	--ctrl-port 9006 --tx-gain 0.7 --rx-gain 0.9 --no-gui
+
+# Node 6 Follower
+python3 experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
+	--id 6 --total 6 --tx 10006 --rx 20006 --ctrl 9006 \
+	--target-snr 20.0 --init-gain 0.7 --status-interval 2.0
 ```
 
 ## 绘图方式

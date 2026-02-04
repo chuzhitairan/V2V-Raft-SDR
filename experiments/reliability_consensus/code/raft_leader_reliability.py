@@ -142,7 +142,7 @@ class LeaderReliability:
         
         # 实验参数
         self.snr = 16.0                         # 目标 SNR (命令行传入)
-        self.p_node_levels = [0.6, 0.7, 0.8, 0.9]  # 可信度范围 (不含 1.0)
+        self.p_node_levels = [0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]  # 可信度范围 (不含 1.0)
         self.n = 4                              # 当前节点数 (命令行传入)
         self.rounds_per_config = 30             # 每组配置的测试轮数
         self.vote_deadline = 0.4                # 投票截止时间 (秒)，原2.0，5倍加速
@@ -867,7 +867,7 @@ def main():
     # 实验参数
     parser.add_argument("--snr", type=float, required=True,
                         help="目标 SNR (手动指定，不再循环枚举)")
-    parser.add_argument("--p-node-levels", type=str, default="0.6,0.7,0.8,0.9",
+    parser.add_argument("--p-node-levels", type=str, default="0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90",
                         help="p_node 等级 (逗号分隔，不含 1.0)")
     parser.add_argument("--n", type=int, required=True,
                         help="当前节点数 (手动指定，不再循环枚举)")

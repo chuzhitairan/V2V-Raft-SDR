@@ -481,8 +481,8 @@ class LeaderWithSNRBroadcast:
                 break
             
             # 降低目标 SNR
-            # 🔧 动态步长调整: >6dB 时步长2.0, <=6dB 时步长0.5 (精细测量低信噪比区域)
-            current_step = 2.0 if self.target_snr > 6.001 else 0.5
+            # 🔧 动态步长调整: >8dB 时步长2.0, <=8dB 时步长0.5 (精细测量低信噪比区域)
+            current_step = 2.0 if self.target_snr > 8.001 else 0.5
             self.target_snr -= current_step
         
         self.experiment_running = False

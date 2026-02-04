@@ -206,7 +206,7 @@ def main():
     parser = argparse.ArgumentParser(description="可靠性共识实验 - 软件仿真（复用真实代码逻辑）")
     parser.add_argument("--n", type=int, default=4, help="节点数（包含 Leader）")
     parser.add_argument("--leader-id", type=int, default=1, help="Leader 的 node_id")
-    parser.add_argument("--p-levels", type=str, default="0.6,0.7,0.8,0.9",
+    parser.add_argument("--p-levels", type=str, default="0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90",
                         help="p_node 等级（逗号分隔）")
     parser.add_argument("--rounds", type=int, default=1000, help="每组测试轮数")
     parser.add_argument("--packet-loss", type=float, default=0.0, 

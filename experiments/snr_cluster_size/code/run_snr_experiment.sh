@@ -6,7 +6,7 @@
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # SDR 配置 (4 台 E200)
 SDR_ARGS=(
@@ -34,7 +34,7 @@ APP_RX_PORTS=(20001 20002 20003 20004)
 CTRL_PORTS=(9001 9002 9003 9004)
 
 # 全局配置
-TOTAL_NODES=4
+TOTAL_NODES=6
 LEADER_ID=1
 
 # 窗口布局 (2x2)
