@@ -10,6 +10,7 @@ SNR-集群规模实验对比绘图工具 (6节点 vs 4节点)
 """
 
 import json
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
@@ -24,7 +25,30 @@ def load_results(filepath):
     with open(filepath, 'r') as f:
         return json.load(f)
 
-def plot_comparison(file_6node, file_4node):
+
+def find_latest_result_file(search_dirs, total_nodes):
+    candidates = []
+    for base_dir in search_dirs:
+        if not os.path.isdir(base_dir):
+            continue
+        for name in os.listdir(base_dir):
+            if not name.startswith("snr_experiment_results_") or not name.endswith(".json"):
+                continue
+            path = os.path.join(base_dir, name)
+            try:
+                data = load_results(path)
+            except Exception:
+                continue
+            if data.get("total_nodes") != total_nodes:
+                continue
+            mtime = os.path.getmtime(path)
+            candidates.append((mtime, path))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    return candidates[0][1]
+
+def plot_comparison(file_6node, file_4node, show=True):
     # 加载数据
     data_6 = load_results(file_6node)
     data_4 = load_results(file_4node)
@@ -125,21 +149,33 @@ def plot_comparison(file_6node, file_4node):
     plt.tight_layout()
     plt.savefig(filename, dpi=200, bbox_inches='tight')
     print(f"[Saved] {filename}")
-    plt.show()
+    if show:
+        plt.show()
 
 if __name__ == "__main__":
-    import os
+    import argparse
     # 获取脚本所在目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.join(script_dir, '..', 'results')
-    
-    # 6 节点文件
-    file_6 = os.path.join(results_dir, "snr_experiment_results_20260124_215123.json")
-    # 4 节点文件
-    file_4 = os.path.join(results_dir, "snr_experiment_results_20260124_230119.json")
-    
+    repo_root = os.path.abspath(os.path.join(script_dir, '..', '..', '..'))
+
+    search_dirs = [results_dir, repo_root]
+
+    parser = argparse.ArgumentParser(description="SNR-集群规模对比绘图")
+    parser.add_argument("--no-show", action="store_true", help="仅保存图片，不弹出窗口")
+    args = parser.parse_args()
+
+    # 自动查找最新的 6 节点和 4 节点结果
+    file_6 = find_latest_result_file(search_dirs, total_nodes=6)
+    file_4 = find_latest_result_file(search_dirs, total_nodes=4)
+
+    if not file_6 or not file_4:
+        print("❌ 未找到完整的 6 节点/4 节点结果文件。")
+        print(f"搜索目录: {search_dirs}")
+        raise SystemExit(1)
+
     print(f"Comparing:")
     print(f"  6 Nodes: {file_6}")
     print(f"  4 Nodes: {file_4}")
-    
-    plot_comparison(file_6, file_4)
+
+    plot_comparison(file_6, file_4, show=not args.no_show)

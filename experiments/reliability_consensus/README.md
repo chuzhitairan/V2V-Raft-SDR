@@ -61,8 +61,8 @@ cd /home/chuzhitairan/V2V-Raft-SDR
 ```bash
 # Node 5 PHY
 python3 core/v2v_hw_phy.py --sdr-args 'addr=...' \
-    --tx-port 20005 --rx-port 10005 --ctrl-port 9005 \
-    --tx-gain 0.5 --rx-gain 0.9
+    --udp-recv-port 10005 --udp-send-port 20005 --ctrl-port 9005 \
+    --tx-gain 0.5 --rx-gain 0.9 --no-gui
 
 # Node 5 App
 python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
@@ -70,6 +70,25 @@ python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
 
 # Node 6 类似
 ```
+
+### E200 手动启动（任意单节点）
+```bash
+# 1) 启动 PHY（E200 以太网地址）
+python3 core/v2v_hw_phy.py --sdr-args "addr=192.168.1.10" \
+    --udp-recv-port 10001 --udp-send-port 20001 \
+    --ctrl-port 9001 --tx-gain 0.7 --rx-gain 0.9 --no-gui
+
+# 2) 启动 Leader（示例）
+python3 experiments/reliability_consensus/code/raft_leader_reliability.py \
+    --id 1 --total 6 --tx 10001 --rx 20001 --snr 20.0 --n 6 --rounds 50
+
+# 或启动 Follower（示例）
+python3 experiments/reliability_consensus/code/raft_follower_reliability.py \
+    --id 2 --total 6 --tx 10002 --rx 20002 --ctrl 9002 \
+    --target-snr 20.0 --init-gain 0.7
+```
+
+> 提示：`--sdr-args` 可替换为其他 E200 地址；端口按节点 ID 顺序递增即可。
 
 ### 开始实验
 在 Leader 窗口按 **Enter** 键开始实验。

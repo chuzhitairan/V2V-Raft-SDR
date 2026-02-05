@@ -21,6 +21,7 @@ import json
 import argparse
 import threading
 import statistics
+import os
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Tuple
 from datetime import datetime
@@ -509,6 +510,10 @@ class LeaderWithSNRBroadcast:
         """保存结果到 JSON 文件"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"snr_experiment_results_{timestamp}.json"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        results_dir = os.path.join(script_dir, "..", "results")
+        os.makedirs(results_dir, exist_ok=True)
+        filepath = os.path.join(results_dir, filename)
         
         data = {
             'start_time': datetime.now().isoformat(),
@@ -534,9 +539,9 @@ class LeaderWithSNRBroadcast:
         }
         
         try:
-            with open(filename, 'w') as f:
+            with open(filepath, 'w') as f:
                 json.dump(data, f, indent=2)
-            print(f"\n💾 结果已保存到: {filename}")
+            print(f"\n💾 结果已保存到: {filepath}")
         except Exception as e:
             print(f"❌ 保存失败: {e}")
     
