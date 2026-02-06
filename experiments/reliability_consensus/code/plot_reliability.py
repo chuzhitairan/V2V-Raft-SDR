@@ -46,6 +46,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+from math import comb
 
 # 设置字体
 plt.rcParams['font.family'] = 'serif'
@@ -102,7 +103,112 @@ def load_results(filepath):
         return json.load(f)
 
 
-def plot_single_result(data, output_dir=None):
+def theoretical_p_sys(n: int, p: float) -> float:
+    """理论 P_sys：无丢包，平票时按 0.5 概率"""
+    p_sys = 0.0
+    for k in range(n + 1):
+        prob_k = comb(n, k) * (p ** k) * ((1 - p) ** (n - k))
+        if k > n - k:
+            p_sys += prob_k
+        elif k == n - k:
+            p_sys += prob_k * 0.5
+    return p_sys
+
+
+def plot_theory_only(n_values, p_nodes, output_dir):
+    """仅绘制理论值与理论增益"""
+    from matplotlib.lines import Line2D
+
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    color_palette = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#F0E442',
+                     '#56B4E9', '#E69F00', '#000000']
+    marker_palette = ['o', 's', '^', 'D', 'v', 'p', 'h', '*']
+    linestyle_palette = ['--', '-.', ':']
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax2 = ax.twinx()
+
+    GAIN_AXIS_COLOR = '#555555'
+    LEFT_AXIS_COLOR = '#000000'
+
+    ax2.set_ylabel('Consensus Gain', fontsize=12, color=GAIN_AXIS_COLOR, fontweight='normal')
+    ax2.tick_params(axis='y', labelcolor=GAIN_AXIS_COLOR, labelsize=11, colors=GAIN_AXIS_COLOR)
+    ax2.spines['right'].set_color(GAIN_AXIS_COLOR)
+    ax2.spines['right'].set_linewidth(1.5)
+
+    ax.spines['left'].set_color(LEFT_AXIS_COLOR)
+    ax.spines['left'].set_linewidth(1.5)
+    ax.tick_params(axis='y', labelcolor=LEFT_AXIS_COLOR, colors=LEFT_AXIS_COLOR)
+
+    n_values = sorted(set(n_values))
+    n_to_color = {n: color_palette[i % len(color_palette)] for i, n in enumerate(n_values)}
+    n_to_marker = {n: marker_palette[i % len(marker_palette)] for i, n in enumerate(n_values)}
+    n_to_dashstyle = {n: linestyle_palette[i % len(linestyle_palette)] for i, n in enumerate(n_values)}
+
+    for n in n_values:
+        color = n_to_color[n]
+        marker = n_to_marker[n]
+        dashstyle = n_to_dashstyle[n]
+
+        theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
+        theory_gain = np.array(theory_values) - np.array(p_nodes)
+
+        ax.plot(p_nodes, theory_values, linestyle='-', linewidth=2.5,
+                marker=marker, markersize=8, color=color)
+        ax2.plot(p_nodes, theory_gain, linestyle=dashstyle, linewidth=1.6,
+                 marker=marker, markersize=5, color=color, alpha=0.75)
+
+    ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
+    ax.plot([p_nodes[0], p_nodes[-1]], [p_nodes[0], p_nodes[-1]], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
+
+    ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
+    ax.set_ylabel(r'System Reliability ($P_{\mathrm{sys}}$)', fontsize=13, color=LEFT_AXIS_COLOR)
+    # ax.set_title('Reliability (Theory)', fontsize=14, fontweight='bold', pad=10)
+    ax.tick_params(axis='both', which='major', labelsize=11)
+
+    ax.set_xlim(0.55, 0.90)
+    ax.set_xticks([0.6, 0.7, 0.8, 0.9])
+    ax.set_ylim(0.55, 1.0)
+    ax.set_yticks([0.6, 0.7, 0.8, 0.9, 1.0])
+
+    ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
+    ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
+
+    legend_handles = []
+    for n in n_values:
+        legend_handles.append(
+            Line2D([0], [0], color=n_to_color[n], linestyle='-', linewidth=2.5,
+                   marker=n_to_marker[n], markersize=8, label=f'$N = {n}$')
+        )
+    legend_handles.append(Line2D([0], [0], color='none', label=' '))
+    legend_handles.append(
+        Line2D([0], [0], color='dimgray', linestyle='-', linewidth=2.5, marker='o', markersize=6,
+               label=r'$P_{\mathrm{sys}}$ (left axis)')
+    )
+    legend_handles.append(
+        Line2D([0], [0], color='dimgray', linestyle='--', linewidth=1.6, marker='o', markersize=4,
+               alpha=0.75, label='Gain (right axis)')
+    )
+    legend_handles.append(
+        Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
+               label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
+    )
+
+    ax2.legend(handles=legend_handles, loc='lower right',
+              frameon=True, fontsize=9,
+              fancybox=True, framealpha=0.8, edgecolor='lightgray',
+              borderpad=0.8, labelspacing=0.35, handlelength=2.2)
+
+    plt.tight_layout()
+    filename = os.path.join(output_dir, f'plot_theory_only_n{"_".join(map(str, n_values))}_{timestamp}.png')
+    plt.savefig(filename, dpi=200, bbox_inches='tight')
+    print(f"[保存] {filename}")
+    plt.close()
+
+
+def plot_single_result(data, output_dir=None, add_theory=False):
     """
     绘制单次实验结果（固定 SNR 和 n）
     生成两张图：
@@ -135,23 +241,10 @@ def plot_single_result(data, output_dir=None):
     ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=10,
             color='#1f77b4', label=f'Measured ($n={n}$, SNR={snr}dB)')
     
-    # 理论曲线: 多数表决二项分布
-    # P_sys = sum_{k=ceil((n+1)/2)}^{n+1} C(n+1,k) * p^k * (1-p)^(n+1-k)
-    # 其中 n+1 是总节点数（含 Leader）
-    try:
-        from scipy.special import comb
-        p_theory = np.linspace(0.55, 1.05, 100)
-        total_nodes = n + 1  # 含 Leader
-        threshold = (total_nodes + 1) // 2  # 多数阈值
-        
-        p_sys_theory = np.zeros_like(p_theory)
-        for k in range(threshold, total_nodes + 1):
-            p_sys_theory += comb(total_nodes, k, exact=True) * (p_theory ** k) * ((1 - p_theory) ** (total_nodes - k))
-        
-        ax.plot(p_theory, p_sys_theory, '--', linewidth=2, color='#ff7f0e', 
-                alpha=0.8, label=f'Theory (Binomial, $n={n}$)')
-    except ImportError:
-        print("⚠️ scipy 未安装，跳过理论曲线")
+    if add_theory:
+        p_sys_theory = [theoretical_p_sys(n, p) for p in p_nodes]
+        ax.plot(p_nodes, p_sys_theory, '-.', linewidth=2, color='#ff7f0e',
+                alpha=0.8, label='Theory (no loss)')
 
     # 基线：单节点可靠性（期望） - 绘制一次并放在图例底部
     baseline_label = 'Single-node Reliability (Expected)'
@@ -229,7 +322,7 @@ def plot_single_result(data, output_dir=None):
     return True
 
 
-def plot_merged_results(data_list, group_by='n', output_dir=None):
+def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=False, measured_only=False):
     """
     合并多个结果文件，绘制对比图
     
@@ -281,7 +374,6 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
             n_values = [d['n'] for d in group_sorted]
             n_to_color = {n: color_palette[i % len(color_palette)] for i, n in enumerate(n_values)}
             n_to_marker = {n: marker_palette[i % len(marker_palette)] for i, n in enumerate(n_values)}
-            n_to_dashstyle = {n: linestyle_palette[i % len(linestyle_palette)] for i, n in enumerate(n_values)}
 
             # 创建右轴，使用灰色强化与左轴的区分
             ax2 = ax.twinx()
@@ -303,18 +395,31 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
                 p_sys_values = [r['p_sys'] for r in results]
                 color = n_to_color[n]
                 marker = n_to_marker[n]
-                dashstyle = n_to_dashstyle[n]
 
                 # 实线: 系统可靠性 P_sys
                 ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5, 
                         marker=marker, markersize=8, color=color)
 
+                # 理论曲线: 无丢包，平票 0.5
+                if add_theory:
+                    theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
+                    ax.plot(p_nodes, theory_values, linestyle='-.', linewidth=2.0,
+                            color=color, alpha=0.35)
+
                 # 虚线: 系统增益 Gain = P_sys - p_node
                 # 使用不同的虚线样式，每个数据点都有标记
                 gain = np.array(p_sys_values) - np.array(p_nodes)
-                ax2.plot(p_nodes, gain, linestyle=dashstyle, linewidth=1.8,
+                ax2.plot(p_nodes, gain, linestyle='--', linewidth=2.0,
                          marker=marker, markersize=5,
-                         color=color, alpha=0.65)
+                         color=color, alpha=0.8)
+
+                # 理论增益: (Theory P_sys - p_node)
+                if add_theory:
+                    theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
+                    theory_gain = np.array(theory_values) - np.array(p_nodes)
+                    ax2.plot(p_nodes, theory_gain, linestyle=':', linewidth=1.2,
+                             marker=None,
+                             color=color, alpha=0.35)
 
             # 绘制零增益线（右轴参考线）
             ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
@@ -363,13 +468,24 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
                        label=r'$P_{\mathrm{sys}}$ (left axis)')
             )
             legend_handles.append(
-                Line2D([0], [0], color='dimgray', linestyle='--', linewidth=1.8, marker='o', markersize=4,
-                       alpha=0.65, label='Gain (right axis)')
+                Line2D([0], [0], color='dimgray', linestyle='--', linewidth=2.0, marker='o', markersize=4,
+                       alpha=0.8, label='Gain (measured, right axis)')
             )
+            if add_theory:
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle=':', linewidth=1.2,
+                           alpha=0.35, label='Gain (theory, right axis)')
+                )
             legend_handles.append(
                 Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
                        label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
             )
+
+            if add_theory:
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle='-.', linewidth=2.0, alpha=0.8,
+                           label='Theory (no loss)')
+                )
             
             # 放在左上角，半透明背景，留出呼吸空间
             ax.legend(handles=legend_handles, loc='upper left',
@@ -385,6 +501,158 @@ def plot_merged_results(data_list, group_by='n', output_dir=None):
             plt.savefig(filename, dpi=200, bbox_inches='tight')
             print(f"[保存] {filename}")
             plt.close()
+
+            # ===== 实际值单独图（含实际增益） =====
+            if measured_only:
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax2 = ax.twinx()
+                ax2.set_ylabel('Consensus Gain', fontsize=12, color=GAIN_AXIS_COLOR, fontweight='normal')
+                ax2.tick_params(axis='y', labelcolor=GAIN_AXIS_COLOR, labelsize=11, colors=GAIN_AXIS_COLOR)
+                ax2.spines['right'].set_color(GAIN_AXIS_COLOR)
+                ax2.spines['right'].set_linewidth(1.5)
+
+                ax.spines['left'].set_color(LEFT_AXIS_COLOR)
+                ax.spines['left'].set_linewidth(1.5)
+                ax.tick_params(axis='y', labelcolor=LEFT_AXIS_COLOR, colors=LEFT_AXIS_COLOR)
+
+                for n in n_values:
+                    color = n_to_color[n]
+                    marker = n_to_marker[n]
+
+                    data_for_n = next(d for d in group_sorted if d['n'] == n)
+                    results = sorted(data_for_n['results'], key=lambda x: x['p_node'])
+                    p_nodes = [r['p_node'] for r in results]
+                    p_sys_values = [r['p_sys'] for r in results]
+                    gain_values = np.array(p_sys_values) - np.array(p_nodes)
+
+                    ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5,
+                            marker=marker, markersize=8, color=color)
+                    ax2.plot(p_nodes, gain_values, linestyle='--', linewidth=2.0,
+                             marker=marker, markersize=5, color=color, alpha=0.8)
+
+                ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
+                ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
+
+                ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
+                ax.set_ylabel(r'System Reliability ($P_{\mathrm{sys}}$)', fontsize=13, color=LEFT_AXIS_COLOR)
+                # ax.set_title(f'Reliability: SNR = {snr:.0f} dB', fontsize=14, fontweight='bold', pad=10)
+                ax.tick_params(axis='both', which='major', labelsize=11)
+
+                ax.set_xlim(0.55, 0.90)
+                ax.set_xticks([0.6, 0.7, 0.8, 0.9])
+                ax.set_ylim(0.55, 1.0)
+                ax.set_yticks([0.6, 0.7, 0.8, 0.9, 1.0])
+
+                ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
+                ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
+
+                legend_handles = []
+                for n in n_values:
+                    legend_handles.append(
+                        Line2D([0], [0], color=n_to_color[n], linestyle='-', linewidth=2.5,
+                               marker=n_to_marker[n], markersize=8, label=f'$N = {n}$')
+                    )
+                legend_handles.append(Line2D([0], [0], color='none', label=' '))
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle='-', linewidth=2.5, marker='o', markersize=6,
+                           label=r'$P_{\mathrm{sys}}$ (left axis)')
+                )
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle='--', linewidth=2.0, marker='o', markersize=4,
+                           alpha=0.8, label='Gain (right axis)')
+                )
+                legend_handles.append(
+                    Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
+                           label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
+                )
+
+                ax2.legend(handles=legend_handles, loc='lower right',
+                          frameon=True, fontsize=9,
+                          fancybox=True, framealpha=0.8, edgecolor='lightgray',
+                          borderpad=0.8, labelspacing=0.35, handlelength=2.2)
+
+                plt.tight_layout()
+                measured_filename = os.path.join(output_dir, f'plot_measured_snr{snr:.0f}_by_n_{timestamp}.png')
+                plt.savefig(measured_filename, dpi=200, bbox_inches='tight')
+                print(f"[保存] {measured_filename}")
+                plt.close()
+
+            # ===== 理论值单独图（含增益曲线） =====
+            if add_theory:
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax2 = ax.twinx()
+                ax2.set_ylabel('Consensus Gain (Theory)', fontsize=12, color=GAIN_AXIS_COLOR, fontweight='normal')
+                ax2.tick_params(axis='y', labelcolor=GAIN_AXIS_COLOR, labelsize=11, colors=GAIN_AXIS_COLOR)
+                ax2.spines['right'].set_color(GAIN_AXIS_COLOR)
+                ax2.spines['right'].set_linewidth(1.5)
+
+                ax.spines['left'].set_color(LEFT_AXIS_COLOR)
+                ax.spines['left'].set_linewidth(1.5)
+                ax.tick_params(axis='y', labelcolor=LEFT_AXIS_COLOR, colors=LEFT_AXIS_COLOR)
+
+                for n in n_values:
+                    color = n_to_color[n]
+                    marker = n_to_marker[n]
+
+                    # 使用第一个对应 n 的数据点的 p_nodes 作为理论采样点
+                    data_for_n = next(d for d in group_sorted if d['n'] == n)
+                    results = sorted(data_for_n['results'], key=lambda x: x['p_node'])
+                    p_nodes = [r['p_node'] for r in results]
+
+                    theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
+                    gain_values = np.array(theory_values) - np.array(p_nodes)
+
+                    ax.plot(p_nodes, theory_values, linestyle='-', linewidth=2.5,
+                            marker=marker, markersize=8, color=color)
+                    ax2.plot(p_nodes, gain_values, linestyle='--', linewidth=1.8,
+                             marker=marker, markersize=5, color=color, alpha=0.65)
+
+                ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
+                ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
+
+                ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
+                ax.set_ylabel(r'Theoretical $P_{\mathrm{sys}}$', fontsize=13, color=LEFT_AXIS_COLOR)
+                ax.set_title(f'Theoretical Reliability: SNR = {snr:.0f} dB', fontsize=14, fontweight='bold', pad=10)
+                ax.tick_params(axis='both', which='major', labelsize=11)
+
+                ax.set_xlim(0.57, 0.93)
+                ax.set_xticks(np.arange(0.6, 0.91, 0.1))
+                ax.set_ylim(0.57, 1.01)
+                ax.set_yticks(np.arange(0.6, 1.01, 0.1))
+
+                ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
+                ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
+
+                legend_handles = []
+                for n in n_values:
+                    legend_handles.append(
+                        Line2D([0], [0], color=n_to_color[n], linestyle='-', linewidth=2.5,
+                               marker=n_to_marker[n], markersize=8, label=f'$N = {n}$')
+                    )
+                legend_handles.append(Line2D([0], [0], color='none', label=' '))
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle='-', linewidth=2.5, marker='o', markersize=6,
+                           label=r'$P_{\mathrm{sys}}$ (left axis)')
+                )
+                legend_handles.append(
+                    Line2D([0], [0], color='dimgray', linestyle='--', linewidth=1.8, marker='o', markersize=4,
+                           alpha=0.65, label='Gain (right axis)')
+                )
+                legend_handles.append(
+                    Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
+                           label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
+                )
+
+                ax.legend(handles=legend_handles, loc='upper left',
+                          bbox_to_anchor=(0.02, 0.98), frameon=True, fontsize=9,
+                          fancybox=True, framealpha=0.6, edgecolor='lightgray',
+                          borderpad=0.8, labelspacing=0.35, handlelength=2.2)
+
+                plt.tight_layout()
+                theory_filename = os.path.join(output_dir, f'plot_theory_snr{snr:.0f}_by_n_{timestamp}.png')
+                plt.savefig(theory_filename, dpi=200, bbox_inches='tight')
+                print(f"[保存] {theory_filename}")
+                plt.close()
     
     else:  # group_by == 'snr'
         # 按 SNR 分组，同一 n 下对比不同 SNR
@@ -502,9 +770,24 @@ def main():
     parser.add_argument('--all', '-a', action='store_true', help='处理所有找到的结果文件')
     parser.add_argument('--filter-n', type=str, help='只保留指定的 n 值 (逗号分隔，如 1,3,6)')
     parser.add_argument('--filter-snr', type=str, help='只保留指定的 SNR 值 (逗号分隔，如 4,14)')
+    parser.add_argument('--add-theory', action='store_true', help='叠加理论曲线（无丢包，平票0.5）')
+    parser.add_argument('--measured-only', action='store_true', help='输出仅实际数据的单独图（含增益）')
+    parser.add_argument('--theory-only', action='store_true', help='仅绘制理论值图（不依赖结果文件）')
+    parser.add_argument('--theory-n', type=str, default='2,3,6,9,12,15', help='理论图的 n 列表 (逗号分隔)')
+    parser.add_argument('--theory-p', type=str, default='0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90',
+                        help='理论图的 p_node 列表 (逗号分隔)')
     
     args = parser.parse_args()
     
+    # 仅理论模式
+    if args.theory_only:
+        n_values = [int(x.strip()) for x in args.theory_n.split(',') if x.strip()]
+        p_nodes = [float(x.strip()) for x in args.theory_p.split(',') if x.strip()]
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, '..', 'plots')
+        plot_theory_only(n_values, p_nodes, output_dir)
+        return
+
     # 列出所有文件模式
     if args.list:
         all_files = find_all_result_files()
@@ -567,6 +850,20 @@ def main():
     if not data_list:
         print("❌ 没有成功加载任何数据")
         return
+
+    # 同一 (snr, n) 只保留最新的结果文件
+    latest_map = {}
+    for d in data_list:
+        key = (d.get('snr'), d.get('n'))
+        path = d.get('_filepath')
+        try:
+            mtime = os.path.getmtime(path) if path else 0
+        except Exception:
+            mtime = 0
+        prev = latest_map.get(key)
+        if prev is None or mtime > prev[0]:
+            latest_map[key] = (mtime, d)
+    data_list = [v[1] for v in latest_map.values()]
     
     # 应用过滤器
     if args.filter_n:
@@ -593,13 +890,19 @@ def main():
     if args.merge and len(data_list) > 1:
         # 合并模式
         print(f"\n📈 合并绘图模式 (按 {args.group_by} 分组)")
-        plot_merged_results(data_list, group_by=args.group_by, output_dir=output_dir)
+        plot_merged_results(
+            data_list,
+            group_by=args.group_by,
+            output_dir=output_dir,
+            add_theory=args.add_theory,
+            measured_only=args.measured_only
+        )
     else:
         # 单文件模式
         for data in data_list:
             print(f"\n--- {data['_filepath']} ---")
             print_summary(data)
-            plot_single_result(data, output_dir=output_dir)
+            plot_single_result(data, output_dir=output_dir, add_theory=args.add_theory)
     
     print("\n✅ 绘图完成!")
 

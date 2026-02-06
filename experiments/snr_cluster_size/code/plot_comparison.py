@@ -87,23 +87,29 @@ def plot_comparison(file_6node, file_4node, show=True):
     ax.yaxis.grid(True, which='major', color='#cccccc', linestyle='-', linewidth=1.0, zorder=0)
     ax.xaxis.grid(True, which='major', color='#eeeeee', linestyle='--', linewidth=0.5, zorder=0)
     
-    # ========== 2. 散点作为背景纹理（统一灰色、极低透明度）==========
+    # ========== 2. 散点作为背景纹理（带微小抖动，匹配颜色）==========
+    # 使用 Jitter (抖动) 避免点重叠，同时颜色与主线保持一致
+    jitter_strength = 0.12  # X轴抖动幅度
+
     scatter_x_6, scatter_y_6 = [], []
     for s, measurements in zip(snr_6, raw_6):
         for m in measurements:
-            scatter_x_6.append(s)  # 不加 jitter，保持整数特征
+            # 添加随机抖动
+            jitter = np.random.uniform(-jitter_strength, jitter_strength)
+            scatter_x_6.append(s + jitter) 
             scatter_y_6.append(m)
     
     scatter_x_4, scatter_y_4 = [], []
     for s, measurements in zip(snr_4, raw_4):
         for m in measurements:
-            scatter_x_4.append(s)
+            jitter = np.random.uniform(-jitter_strength, jitter_strength)
+            scatter_x_4.append(s + jitter)
             scatter_y_4.append(m)
     
-    # 散点用统一的浅灰色，极低透明度
-    ax.scatter(scatter_x_6, scatter_y_6, alpha=0.08, color='gray', s=15, 
+    # 散点颜色匹配，但透明度很低，体现分布密度
+    ax.scatter(scatter_x_6, scatter_y_6, alpha=0.06, color=color_6, s=12, 
                edgecolors='none', zorder=1, label=None)
-    ax.scatter(scatter_x_4, scatter_y_4, alpha=0.08, color='gray', s=15, 
+    ax.scatter(scatter_x_4, scatter_y_4, alpha=0.06, color=color_4, s=12, 
                edgecolors='none', zorder=1, label=None)
     
     # ========== 3. Min-Max 色带（fill_between）==========
@@ -131,11 +137,21 @@ def plot_comparison(file_6node, file_4node, show=True):
     ax.tick_params(axis='both', which='major', labelsize=14)
     
     # Y 轴范围固定，强调整数（从1开始）
-    ax.set_ylim(0.5, 6.8)
-    ax.set_xlim(min(min(snr_6), min(snr_4)) - 0.5, max(max(snr_6), max(snr_4)) + 0.5)
+    ax.set_ylim(1.0, 6.0)
+    ax.set_xlim(2.0, 14.0)
     
     # 图例
-    ax.legend(loc='lower right', frameon=True, fontsize=13, 
+    # 添加一个用于说明 Min-Max 范围的图例项
+    from matplotlib.patches import Patch
+    handles, labels = ax.get_legend_handles_labels()
+    
+    # 创建一个灰色的补丁代表 Range
+    range_patch = Patch(facecolor='gray', alpha=0.2, label='Min-Max Range')
+    
+    # 将 Range 放到底部
+    handles.append(range_patch)
+    
+    ax.legend(handles=handles, loc='lower right', frameon=True, fontsize=13, 
               fancybox=True, framealpha=0.9, edgecolor='lightgray')
     
     # 保存到 plots 目录
