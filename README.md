@@ -156,7 +156,3 @@ cd V2V-Raft-SDR
 python3 experiments/reliability_consensus/code/plot_reliability.py \
     experiments/reliability_consensus/results/high_reliability/[latest_json_result].json
 ```
-
----
-
-**Note to Reviewers**: Historical execution data required to reproduce formatting elements from Figure 10 and 11 reside inside the `experiments/*/results` directories.
