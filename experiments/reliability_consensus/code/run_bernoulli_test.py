@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-简单脚本：按输入的实验次数和阈值 p 运行伯努利试验，输出实际频率。
+ count  p Run
 
-用法示例:
+:
   python3 run_bernoulli_test.py --n 1000 --p 0.8
   python3 run_bernoulli_test.py --n 10000 --p 0.7 --reps 50 --seed 42
 """
@@ -30,11 +30,11 @@ def run_once(n, p):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='运行伯努利试验并报告实际频率')
-    parser.add_argument('--n', type=int, required=True, help='每次试验的样本数 (实验次数)')
-    parser.add_argument('--p', type=float, required=True, help='判定阈值 p (0-1)')
-    parser.add_argument('--reps', type=int, default=1, help='重复独立实验次数，默认1')
-    parser.add_argument('--seed', type=int, default=None, help='可选随机种子，便于复现')
+    parser = argparse.ArgumentParser(description='Run')
+    parser.add_argument('--n', type=int, required=True, help=' count  ( count )')
+    parser.add_argument('--p', type=float, required=True, help=' p (0-1)')
+    parser.add_argument('--reps', type=int, default=1, help=' count 1')
+    parser.add_argument('--seed', type=int, default=None, help='')
     args = parser.parse_args()
 
     if args.seed is not None:

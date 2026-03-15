@@ -1,41 +1,41 @@
 #!/usr/bin/env python3
 """
-可靠性共识实验结果绘图工具
+Result
 =========================
 
-支持两种模式：
-1. 单文件模式: 对一次实验（固定 SNR 和 n）的结果画图
-2. 合并模式: 合并多个结果文件，按 SNR 或 n 分组对比
+Support
+1. :  SNR  nResult
+2. : Result SNR  n 
 
-结果目录结构:
+Result:
     results/
-    ├── n3_snr12/
-    │   └── reliability_20250126_120000.json
-    ├── n3_snr16/
-    │   └── reliability_20250126_130000.json
-    └── n4_snr16/
-        └── reliability_20250126_140000.json
+     n3_snr12/
+        reliability_20250126_120000.json
+     n3_snr16/
+        reliability_20250126_130000.json
+     n4_snr16/
+         reliability_20250126_140000.json
 
-使用方法:
-    # 列出所有结果文件
+Usage:
+    # AllResult
     python3 plot_reliability.py --list
     
-    # 处理最新的结果文件
+    # Result
     python3 plot_reliability.py
     
-    # 处理所有结果文件
+    # AllResult
     python3 plot_reliability.py --all
     
-    # 指定特定文件
+    # 
     python3 plot_reliability.py ../results/n4_snr16/reliability_*.json
     
-    # 合并多个文件画图 (同一 SNR，不同 n)
+    #  ( SNR n)
     python3 plot_reliability.py --merge --all
     
-    # 合并多个文件画图 (同一 n，不同 SNR)  
+    #  ( n SNR)  
     python3 plot_reliability.py --merge --group-by snr --all
 
-作者: V2V-Raft-SDR 项目
+: V2V-Raft-SDR 
 """
 
 import json
@@ -48,22 +48,22 @@ import numpy as np
 from datetime import datetime
 from math import comb
 
-# 设置字体
+# 
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman', 'DejaVu Serif']
 plt.rcParams['axes.unicode_minus'] = False
 
 
 def find_latest_result_file():
-    """查找最新的结果文件"""
-    # 获取脚本所在目录
+    """Result"""
+    # 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_base = os.path.join(script_dir, '..', 'results')
     
     patterns = [
-        # 新目录结构: results/n{n}_snr{snr}/reliability_*.json
+        # : results/n{n}_snr{snr}/reliability_*.json
         os.path.join(results_base, '*', 'reliability_*.json'),
-        # 旧目录结构（兼容）
+        # 
         os.path.join(results_base, 'reliability_*.json'),
         "reliability_snr*.json",
         "experiments/reliability_consensus/results/*/reliability_*.json",
@@ -80,14 +80,14 @@ def find_latest_result_file():
 
 
 def find_all_result_files(results_dir=None):
-    """查找所有结果文件"""
+    """AllResult"""
     if results_dir is None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         results_dir = os.path.join(script_dir, '..', 'results')
     
     patterns = [
-        os.path.join(results_dir, '*', 'reliability_*.json'),  # 新结构
-        os.path.join(results_dir, 'reliability_*.json'),       # 旧结构
+        os.path.join(results_dir, '*', 'reliability_*.json'),  # 
+        os.path.join(results_dir, 'reliability_*.json'),       # 
     ]
     
     all_files = []
@@ -98,13 +98,13 @@ def find_all_result_files(results_dir=None):
 
 
 def load_results(filepath):
-    """加载结果文件"""
+    """Result"""
     with open(filepath, 'r') as f:
         return json.load(f)
 
 
 def theoretical_p_sys(n: int, p: float) -> float:
-    """理论 P_sys：无丢包，平票时按 0.5 概率"""
+    """ P_sysLoss 0.5 """
     p_sys = 0.0
     for k in range(n + 1):
         prob_k = comb(n, k) * (p ** k) * ((1 - p) ** (n - k))
@@ -116,7 +116,7 @@ def theoretical_p_sys(n: int, p: float) -> float:
 
 
 def plot_theory_only(n_values, p_nodes, output_dir):
-    """仅绘制理论值与理论增益"""
+    """Theory"""
     from matplotlib.lines import Line2D
 
     os.makedirs(output_dir, exist_ok=True)
@@ -204,16 +204,16 @@ def plot_theory_only(n_values, p_nodes, output_dir):
     plt.tight_layout()
     filename = os.path.join(output_dir, f'plot_theory_only_n{"_".join(map(str, n_values))}_{timestamp}.png')
     plt.savefig(filename, dpi=200, bbox_inches='tight')
-    print(f"[保存] {filename}")
+    print(f"[] {filename}")
     plt.close()
 
 
 def plot_single_result(data, output_dir=None, add_theory=False):
     """
-    绘制单次实验结果（固定 SNR 和 n）
-    生成两张图：
+    Result SNR  n
+    
     1. P_sys vs p_node
-    2. 有效规模 vs p_node
+    2.  vs p_node
     """
     results = data['results']
     snr = data['snr']
@@ -222,12 +222,12 @@ def plot_single_result(data, output_dir=None, add_theory=False):
     if output_dir is None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, '..', 'plots')
-    # 确保输出目录存在
+    # 
     os.makedirs(output_dir, exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 按 p_node 排序
+    #  p_node 
     results_sorted = sorted(results, key=lambda x: x['p_node'])
     
     p_nodes = [r['p_node'] for r in results_sorted]
@@ -235,7 +235,7 @@ def plot_single_result(data, output_dir=None, add_theory=False):
     effective_scales = [r['avg_effective_scale'] for r in results_sorted]
     scale_stds = [r['std_effective_scale'] for r in results_sorted]
     
-    # ===== 图1: P_sys vs p_node =====
+    # ===== 1: P_sys vs p_node =====
     fig, ax = plt.subplots(figsize=(8, 6))
     
     ax.plot(p_nodes, p_sys_values, 'o-', linewidth=2.5, markersize=10,
@@ -246,7 +246,7 @@ def plot_single_result(data, output_dir=None, add_theory=False):
         ax.plot(p_nodes, p_sys_theory, '-.', linewidth=2, color='#ff7f0e',
                 alpha=0.8, label='Theory (no loss)')
 
-    # 基线：单节点可靠性（期望） - 绘制一次并放在图例底部
+    # Node - 
     baseline_label = 'Single-node Reliability (Expected)'
     ax.plot([0.55, 1.05], [0.55, 1.05], 'k:', linewidth=1.5, alpha=0.5,
             label=baseline_label)
@@ -261,7 +261,7 @@ def plot_single_result(data, output_dir=None, add_theory=False):
     ax.set_xticks(np.arange(0.6, 1.01, 0.1))
     ax.set_yticks(np.arange(0.6, 1.01, 0.1))
     ax.grid(True, alpha=0.3)
-    # 去重 legend，避免重复标签，并把基线移动到底部
+    #  legend
     handles, labels = ax.get_legend_handles_labels()
     unique = {}
     new_h, new_l = [], []
@@ -283,17 +283,17 @@ def plot_single_result(data, output_dir=None, add_theory=False):
     
     filename = os.path.join(output_dir, f'plot_psys_snr{snr:.0f}_n{n}_{timestamp}.png')
     plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"[保存] {filename}")
+    print(f"[] {filename}")
     plt.close()
     
-    # ===== 图2: 有效规模 vs p_node =====
+    # ===== 2:  vs p_node =====
     fig, ax = plt.subplots(figsize=(8, 6))
     
     ax.errorbar(p_nodes, effective_scales, yerr=scale_stds,
                 fmt='s-', linewidth=2.5, markersize=10, capsize=4,
                 color='#2ca02c', label=f'Measured ($n={n}$)')
     
-    # 理论有效规模: E[scale] = n * p_node (Follower)
+    # : E[scale] = n * p_node (Follower)
     p_theory = np.array(p_nodes)
     scale_theory = n * p_theory
     ax.plot(p_theory, scale_theory, '--', linewidth=2, color='#d62728',
@@ -316,7 +316,7 @@ def plot_single_result(data, output_dir=None, add_theory=False):
     
     filename = os.path.join(output_dir, f'plot_scale_snr{snr:.0f}_n{n}_{timestamp}.png')
     plt.savefig(filename, dpi=150, bbox_inches='tight')
-    print(f"[保存] {filename}")
+    print(f"[] {filename}")
     plt.close()
     
     return True
@@ -324,65 +324,65 @@ def plot_single_result(data, output_dir=None, add_theory=False):
 
 def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=False, measured_only=False):
     """
-    合并多个结果文件，绘制对比图
+    Result
     
-    group_by: 'n' - 同一 SNR，对比不同 n
-              'snr' - 同一 n，对比不同 SNR
+    group_by: 'n' -  SNR n
+              'snr' -  n SNR
     """
     from matplotlib.lines import Line2D
     import matplotlib.patches as mpatches
     
-    # 使用 LaTeX 风格字体
+    #  LaTeX 
     plt.rcParams['mathtext.fontset'] = 'cm'
     plt.rcParams['font.family'] = 'serif'
     
     if output_dir is None:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, '..', 'plots')
-    # 确保输出目录存在
+    # 
     os.makedirs(output_dir, exist_ok=True)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 颜色映射 - 使用高对比度、打印友好的颜色
+    #  - 
     color_palette = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#F0E442', 
                      '#56B4E9', '#E69F00', '#000000']
-    # 标记形状 - 便于黑白打印区分
+    #  - 
     marker_palette = ['o', 's', '^', 'D', 'v', 'p', 'h', '*']
-    # 虚线样式 - 不同的点划线样式
+    #  - 
     linestyle_palette = ['--', '-.', ':']
     
-    # 右轴专用颜色（深灰色，与左轴黑色区分）
+    # 
     GAIN_AXIS_COLOR = '#555555'
     LEFT_AXIS_COLOR = '#000000'
     
     if group_by == 'n':
-        # 按 n 分组，同一 SNR 下对比不同 n
+        #  n  SNR  n
         snr_groups = {}
         for data in data_list:
             snr = data['snr']
             snr_groups.setdefault(snr, []).append(data)
 
         for snr, group in snr_groups.items():
-            # 创建图形，留出顶部空间放图例
+            # 
             fig, ax = plt.subplots(figsize=(8, 6))
 
-            # 按 n 排序
+            #  n 
             group_sorted = sorted(group, key=lambda x: x['n'])
             
-            # 为每个 n 值分配颜色、标记和虚线样式
+            #  n 
             n_values = [d['n'] for d in group_sorted]
             n_to_color = {n: color_palette[i % len(color_palette)] for i, n in enumerate(n_values)}
             n_to_marker = {n: marker_palette[i % len(marker_palette)] for i, n in enumerate(n_values)}
 
-            # 创建右轴，使用灰色强化与左轴的区分
+            # 
             ax2 = ax.twinx()
             ax2.set_ylabel('Consensus Gain', fontsize=12, color=GAIN_AXIS_COLOR, fontweight='normal')
             ax2.tick_params(axis='y', labelcolor=GAIN_AXIS_COLOR, labelsize=11, colors=GAIN_AXIS_COLOR)
             ax2.spines['right'].set_color(GAIN_AXIS_COLOR)
             ax2.spines['right'].set_linewidth(1.5)
             
-            # 左轴使用黑色
+            # 
             ax.spines['left'].set_color(LEFT_AXIS_COLOR)
             ax.spines['left'].set_linewidth(1.5)
             ax.tick_params(axis='y', labelcolor=LEFT_AXIS_COLOR, colors=LEFT_AXIS_COLOR)
@@ -396,24 +396,24 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                 color = n_to_color[n]
                 marker = n_to_marker[n]
 
-                # 实线: 系统可靠性 P_sys
+                # : System P_sys
                 ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5, 
                         marker=marker, markersize=8, color=color)
 
-                # 理论曲线: 无丢包，平票 0.5
+                # : Loss 0.5
                 if add_theory:
                     theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
                     ax.plot(p_nodes, theory_values, linestyle='-.', linewidth=2.0,
                             color=color, alpha=0.35)
 
-                # 虚线: 系统增益 Gain = P_sys - p_node
-                # 使用不同的虚线样式，每个数据点都有标记
+                # : System Gain = P_sys - p_node
+                # 
                 gain = np.array(p_sys_values) - np.array(p_nodes)
                 ax2.plot(p_nodes, gain, linestyle='--', linewidth=2.0,
                          marker=marker, markersize=5,
                          color=color, alpha=0.8)
 
-                # 理论增益: (Theory P_sys - p_node)
+                # : (Theory P_sys - p_node)
                 if add_theory:
                     theory_values = [theoretical_p_sys(n, p) for p in p_nodes]
                     theory_gain = np.array(theory_values) - np.array(p_nodes)
@@ -421,37 +421,37 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                              marker=None,
                              color=color, alpha=0.35)
 
-            # 绘制零增益线（右轴参考线）
+            # 
             ax2.axhline(0.0, color=GAIN_AXIS_COLOR, linestyle=':', linewidth=1.0, alpha=0.5)
 
-            # 基线：单节点可靠性 P_sys = p_node
+            # Node P_sys = p_node
             ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
 
-            # 坐标轴设置 - 缩减范围到数据实际范围
+            #  - 
             ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
             ax.set_ylabel(r'System Reliability ($P_{\mathrm{sys}}$)', fontsize=13, color=LEFT_AXIS_COLOR)
             ax.set_title(f'Reliability Comparison: SNR = {snr:.0f} dB', fontsize=14, fontweight='bold', pad=10)
             ax.tick_params(axis='both', which='major', labelsize=11)
             
-            # X轴缩减到数据实际范围
+            # X
             ax.set_xlim(0.57, 0.93)
             ax.set_xticks(np.arange(0.6, 0.91, 0.1))
             ax.set_ylim(0.57, 1.01)
             ax.set_yticks(np.arange(0.6, 1.01, 0.1))
             
-            # 只保留水平网格线，突出 P_sys 数值
+            #  P_sys 
             ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
             ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
             
-            # 右轴范围
+            # 
             ax2.set_ylim(-0.03, 0.18)
             ax2.set_yticks(np.arange(0.0, 0.16, 0.05))
             
-            # ===== 创建统一图例（放在左上角空白处）=====
-            # 合并数据系列和线条类型说明
+            # ===== =====
+            # 
             legend_handles = []
             
-            # 数据系列（颜色+标记 = N 值，表示网络总规模）
+            # + = N 
             for n in n_values:
                 legend_handles.append(
                     Line2D([0], [0], color=n_to_color[n], linestyle='-', linewidth=2.5, 
@@ -459,10 +459,10 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                            label=f'$N = {n}$')
                 )
             
-            # 分隔（用空白占位）
+            # 
             legend_handles.append(Line2D([0], [0], color='none', label=' '))
             
-            # 线条类型说明
+            # 
             legend_handles.append(
                 Line2D([0], [0], color='dimgray', linestyle='-', linewidth=2.5, marker='o', markersize=6,
                        label=r'$P_{\mathrm{sys}}$ (left axis)')
@@ -487,11 +487,11 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                            label='Theory (no loss)')
                 )
             
-            # 放在左上角，半透明背景，留出呼吸空间
+            # 
             ax.legend(handles=legend_handles, loc='upper left',
-                     bbox_to_anchor=(0.02, 0.98),  # 留出padding
+                     bbox_to_anchor=(0.02, 0.98),  # padding
                      frameon=True, fontsize=9, fancybox=True, 
-                     framealpha=0.6,  # 半透明背景
+                     framealpha=0.6,  # 
                      edgecolor='lightgray', borderpad=0.8,
                      labelspacing=0.35, handlelength=2.2)
 
@@ -499,10 +499,10 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
 
             filename = os.path.join(output_dir, f'plot_compare_snr{snr:.0f}_by_n_{timestamp}.png')
             plt.savefig(filename, dpi=200, bbox_inches='tight')
-            print(f"[保存] {filename}")
+            print(f"[] {filename}")
             plt.close()
 
-            # ===== 实际值单独图（含实际增益） =====
+            # =====  =====
             if measured_only:
                 fig, ax = plt.subplots(figsize=(8, 6))
                 ax2 = ax.twinx()
@@ -574,10 +574,10 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                 plt.tight_layout()
                 measured_filename = os.path.join(output_dir, f'plot_measured_snr{snr:.0f}_by_n_{timestamp}.png')
                 plt.savefig(measured_filename, dpi=200, bbox_inches='tight')
-                print(f"[保存] {measured_filename}")
+                print(f"[] {measured_filename}")
                 plt.close()
 
-            # ===== 理论值单独图（含增益曲线） =====
+            # ===== Theory =====
             if add_theory:
                 fig, ax = plt.subplots(figsize=(8, 6))
                 ax2 = ax.twinx()
@@ -594,7 +594,7 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                     color = n_to_color[n]
                     marker = n_to_marker[n]
 
-                    # 使用第一个对应 n 的数据点的 p_nodes 作为理论采样点
+                    #  n  p_nodes 
                     data_for_n = next(d for d in group_sorted if d['n'] == n)
                     results = sorted(data_for_n['results'], key=lambda x: x['p_node'])
                     p_nodes = [r['p_node'] for r in results]
@@ -651,11 +651,11 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                 plt.tight_layout()
                 theory_filename = os.path.join(output_dir, f'plot_theory_snr{snr:.0f}_by_n_{timestamp}.png')
                 plt.savefig(theory_filename, dpi=200, bbox_inches='tight')
-                print(f"[保存] {theory_filename}")
+                print(f"[] {theory_filename}")
                 plt.close()
     
     else:  # group_by == 'snr'
-        # 按 SNR 分组，同一 n 下对比不同 SNR
+        #  SNR  n  SNR
         n_groups = {}
         for data in data_list:
             n = data['n']
@@ -664,10 +664,10 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
         for n, group in n_groups.items():
             fig, ax = plt.subplots(figsize=(8, 6))
 
-            # 按 SNR 排序（从高到低）
+            #  SNR 
             group_sorted = sorted(group, key=lambda x: x['snr'], reverse=True)
             
-            # 为每个 SNR 值分配颜色和标记
+            #  SNR 
             snr_values = [d['snr'] for d in group_sorted]
             snr_to_color = {s: color_palette[i % len(color_palette)] for i, s in enumerate(snr_values)}
             snr_to_marker = {s: marker_palette[i % len(marker_palette)] for i, s in enumerate(snr_values)}
@@ -684,7 +684,7 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                 ax.plot(p_nodes, p_sys_values, linestyle='-', linewidth=2.5,
                         marker=marker, markersize=9, color=color)
 
-            # 基线：单节点可靠性 P_sys = p_node
+            # Node P_sys = p_node
             ax.plot([0.58, 0.92], [0.58, 0.92], color='gray', linestyle=':', linewidth=1.5, alpha=0.6)
 
             ax.set_xlabel(r'Node Reliability ($p_{\mathrm{node}}$)', fontsize=13)
@@ -696,14 +696,14 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
             ax.set_ylim(0.57, 1.01)
             ax.set_yticks(np.arange(0.6, 1.01, 0.1))
             
-            # 只保留水平网格线
+            # 
             ax.grid(True, axis='y', alpha=0.4, linestyle='-', linewidth=0.6)
             ax.grid(True, axis='x', alpha=0.15, linestyle='--', linewidth=0.4)
             
-            # ===== 创建统一图例（放在左上角空白处）=====
+            # ===== =====
             legend_handles = []
             
-            # SNR 值
+            # SNR 
             for s in snr_values:
                 legend_handles.append(
                     Line2D([0], [0], color=snr_to_color[s], linestyle='-', linewidth=2.5, 
@@ -711,16 +711,16 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
                            label=f'SNR = {s:.0f} dB')
                 )
             
-            # 分隔
+            # 
             legend_handles.append(Line2D([0], [0], color='none', label=' '))
             
-            # 基线说明
+            # 
             legend_handles.append(
                 Line2D([0], [0], color='gray', linestyle=':', linewidth=1.5, alpha=0.6,
                        label=r'$P_{\mathrm{sys}} = p_{\mathrm{node}}$')
             )
             
-            # 放在左上角，半透明背景
+            # 
             ax.legend(handles=legend_handles, loc='upper left',
                      bbox_to_anchor=(0.02, 0.98),
                      frameon=True, fontsize=9, fancybox=True,
@@ -732,27 +732,27 @@ def plot_merged_results(data_list, group_by='n', output_dir=None, add_theory=Fal
 
             filename = os.path.join(output_dir, f'plot_compare_n{n}_by_snr_{timestamp}.png')
             plt.savefig(filename, dpi=200, bbox_inches='tight')
-            print(f"[保存] {filename}")
+            print(f"[] {filename}")
             plt.close()
 
 
 def print_summary(data):
-    """打印单次实验摘要"""
+    """"""
     results = data['results']
     snr = data['snr']
     n = data['n']
     
     print("\n" + "=" * 60)
-    print("可靠性共识实验结果摘要")
+    print("Result")
     print("=" * 60)
     print(f"SNR: {snr} dB")
-    print(f"Follower 数量 (n): {n}")
-    print(f"每组测试轮数: {data.get('rounds_per_config', 'N/A')}")
-    print(f"\n{'p_node':<10} {'P_sys':<10} {'有效规模':<20} {'成功/总数':<15}")
+    print(f"Follower  (n): {n}")
+    print(f"Test: {data.get('rounds_per_config', 'N/A')}")
+    print(f"\n{'p_node':<10} {'P_sys':<10} {'':<20} {'Success/':<15}")
     print("-" * 60)
     
     for r in sorted(results, key=lambda x: x['p_node']):
-        scale_str = f"{r['avg_effective_scale']:.2f}±{r['std_effective_scale']:.2f}"
+        scale_str = f"{r['avg_effective_scale']:.2f}{r['std_effective_scale']:.2f}"
         count_str = f"{r['success_count']}/{r['total_rounds']}"
         print(f"{r['p_node']:<10.2f} {r['p_sys']:<10.3f} {scale_str:<20} {count_str:<15}")
     
@@ -760,26 +760,26 @@ def print_summary(data):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='可靠性共识实验结果绘图工具')
-    parser.add_argument('files', nargs='*', help='结果文件路径 (支持通配符)')
-    parser.add_argument('--merge', action='store_true', help='合并多个文件绘制对比图')
+    parser = argparse.ArgumentParser(description='Result')
+    parser.add_argument('files', nargs='*', help='Result (Support)')
+    parser.add_argument('--merge', action='store_true', help='')
     parser.add_argument('--group-by', choices=['n', 'snr'], default='n',
-                       help='合并模式下的分组方式: n (同SNR比较不同n) 或 snr (同n比较不同SNR)')
-    parser.add_argument('--output-dir', '-o', help='输出目录')
-    parser.add_argument('--list', '-l', action='store_true', help='列出所有可用的结果文件')
-    parser.add_argument('--all', '-a', action='store_true', help='处理所有找到的结果文件')
-    parser.add_argument('--filter-n', type=str, help='只保留指定的 n 值 (逗号分隔，如 1,3,6)')
-    parser.add_argument('--filter-snr', type=str, help='只保留指定的 SNR 值 (逗号分隔，如 4,14)')
-    parser.add_argument('--add-theory', action='store_true', help='叠加理论曲线（无丢包，平票0.5）')
-    parser.add_argument('--measured-only', action='store_true', help='输出仅实际数据的单独图（含增益）')
-    parser.add_argument('--theory-only', action='store_true', help='仅绘制理论值图（不依赖结果文件）')
-    parser.add_argument('--theory-n', type=str, default='2,3,6,9,12,15', help='理论图的 n 列表 (逗号分隔)')
+                       help=': n (SNRn)  snr (nSNR)')
+    parser.add_argument('--output-dir', '-o', help='')
+    parser.add_argument('--list', '-l', action='store_true', help='AllResult')
+    parser.add_argument('--all', '-a', action='store_true', help='AllResult')
+    parser.add_argument('--filter-n', type=str, help=' n  ( 1,3,6)')
+    parser.add_argument('--filter-snr', type=str, help=' SNR  ( 4,14)')
+    parser.add_argument('--add-theory', action='store_true', help='Loss0.5')
+    parser.add_argument('--measured-only', action='store_true', help='')
+    parser.add_argument('--theory-only', action='store_true', help='TheoryResult')
+    parser.add_argument('--theory-n', type=str, default='2,3,6,9,12,15', help=' n  ()')
     parser.add_argument('--theory-p', type=str, default='0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90',
-                        help='理论图的 p_node 列表 (逗号分隔)')
+                        help=' p_node  ()')
     
     args = parser.parse_args()
     
-    # 仅理论模式
+    # 
     if args.theory_only:
         n_values = [int(x.strip()) for x in args.theory_n.split(',') if x.strip()]
         p_nodes = [float(x.strip()) for x in args.theory_p.split(',') if x.strip()]
@@ -788,13 +788,13 @@ def main():
         plot_theory_only(n_values, p_nodes, output_dir)
         return
 
-    # 列出所有文件模式
+    # All
     if args.list:
         all_files = find_all_result_files()
         if not all_files:
-            print("❌ 未找到任何结果文件")
+            print(" Result")
         else:
-            print(f"📂 找到 {len(all_files)} 个结果文件:")
+            print(f"  {len(all_files)} Result:")
             for f in all_files:
                 try:
                     data = load_results(f)
@@ -802,10 +802,10 @@ def main():
                     snr = data.get('snr', '?')
                     print(f"   - {f}  (n={n}, SNR={snr} dB)")
                 except Exception as e:
-                    print(f"   - {f}  (加载失败: {e})")
+                    print(f"   - {f}  (Fail: {e})")
         return
     
-    # 获取文件列表
+    # 
     if args.files:
         files = []
         for pattern in args.files:
@@ -814,7 +814,7 @@ def main():
                 files.extend(matched)
             elif os.path.exists(pattern):
                 files.append(pattern)
-        files = list(set(files))  # 去重
+        files = list(set(files))  # 
     elif args.all:
         files = find_all_result_files()
     else:
@@ -822,22 +822,22 @@ def main():
         if filepath:
             files = [filepath]
         else:
-            print("❌ 找不到结果文件。请指定文件路径:")
+            print(" Result:")
             print("   python3 plot_reliability.py <result_file.json>")
             print("   python3 plot_reliability.py --merge *.json")
-            print("   python3 plot_reliability.py --list  # 列出所有文件")
-            print("   python3 plot_reliability.py --all   # 处理所有文件")
+            print("   python3 plot_reliability.py --list  # All")
+            print("   python3 plot_reliability.py --all   # All")
             return
     
     if not files:
-        print("❌ 没有找到匹配的文件")
+        print(" ")
         return
     
-    print(f"📊 找到 {len(files)} 个结果文件:")
+    print(f"  {len(files)} Result:")
     for f in sorted(files):
         print(f"   - {f}")
     
-    # 加载所有数据
+    # All
     data_list = []
     for filepath in files:
         try:
@@ -845,13 +845,13 @@ def main():
             data['_filepath'] = filepath
             data_list.append(data)
         except Exception as e:
-            print(f"⚠️ 加载失败: {filepath} - {e}")
+            print(f" Fail: {filepath} - {e}")
     
     if not data_list:
-        print("❌ 没有成功加载任何数据")
+        print(" Success")
         return
 
-    # 同一 (snr, n) 只保留最新的结果文件
+    #  (snr, n) Result
     latest_map = {}
     for d in data_list:
         key = (d.get('snr'), d.get('n'))
@@ -865,19 +865,19 @@ def main():
             latest_map[key] = (mtime, d)
     data_list = [v[1] for v in latest_map.values()]
     
-    # 应用过滤器
+    # 
     if args.filter_n:
         filter_n_values = set(int(x.strip()) for x in args.filter_n.split(','))
         data_list = [d for d in data_list if d['n'] in filter_n_values]
-        print(f"🔍 过滤 n ∈ {sorted(filter_n_values)}，剩余 {len(data_list)} 个文件")
+        print(f"  n  {sorted(filter_n_values)} {len(data_list)} ")
     
     if args.filter_snr:
         filter_snr_values = set(float(x.strip()) for x in args.filter_snr.split(','))
         data_list = [d for d in data_list if d['snr'] in filter_snr_values]
-        print(f"🔍 过滤 SNR ∈ {sorted(filter_snr_values)}，剩余 {len(data_list)} 个文件")
+        print(f"  SNR  {sorted(filter_snr_values)} {len(data_list)} ")
     
     if not data_list:
-        print("❌ 过滤后没有剩余数据")
+        print(" ")
         return
     
     if args.output_dir:
@@ -888,8 +888,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     
     if args.merge and len(data_list) > 1:
-        # 合并模式
-        print(f"\n📈 合并绘图模式 (按 {args.group_by} 分组)")
+        # 
+        print(f"\n  ( {args.group_by} )")
         plot_merged_results(
             data_list,
             group_by=args.group_by,
@@ -898,13 +898,13 @@ def main():
             measured_only=args.measured_only
         )
     else:
-        # 单文件模式
+        # 
         for data in data_list:
             print(f"\n--- {data['_filepath']} ---")
             print_summary(data)
             plot_single_result(data, output_dir=output_dir, add_theory=args.add_theory)
     
-    print("\n✅ 绘图完成!")
+    print("\n !")
 
 
 if __name__ == "__main__":

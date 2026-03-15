@@ -13,7 +13,7 @@ from gnuradio import qtgui
 import os
 import sys
 
-# 添加 core 目录到搜索路径，确保能导入 wifi_phy_hier
+# Add core directory to search path to ensure wifi_phy_hier can be imported
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
 

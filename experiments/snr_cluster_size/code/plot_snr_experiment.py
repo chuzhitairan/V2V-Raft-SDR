@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-SNR-集群规模实验结果绘图工具
+SNR-Result 
 ============================
 
-读取实验结果 JSON 文件，绘制：
-1. SNR vs 集群规模
-2. SNR vs 丢包率
-3. 各节点丢包率对比
+Result  JSON 
+1. SNR vs 
+2. SNR vs Loss Rate 
+3. Node Loss Rate 
 
-使用方法:
+:
     python3 plot_snr_experiment.py <result_file.json>
-    python3 plot_snr_experiment.py  # 自动查找最新结果文件
+    python3 plot_snr_experiment.py
 
-作者: V2V-Raft-SDR 项目
+: V2V-Raft-SDR 
 """
 
 import json
@@ -23,18 +23,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 
-# 设置字体
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman', 'DejaVu Serif']
 plt.rcParams['axes.unicode_minus'] = False
 
 
 def find_latest_result_file():
-    """查找最新的结果文件"""
+    """Result """
     pattern = "snr_experiment_results_*.json"
     files = glob.glob(pattern)
     if not files:
-        # 也在 scripts 目录下查找
         files = glob.glob(os.path.join("scripts", pattern))
     if not files:
         return None
@@ -42,52 +40,44 @@ def find_latest_result_file():
 
 
 def load_results(filepath):
-    """加载结果文件"""
+    """Result """
     with open(filepath, 'r') as f:
         return json.load(f)
 
 
 def plot_results(data, output_prefix=None):
-    """绘制实验结果图表"""
-    # 1. 过滤数据: 仅保留 target_snr <= 18 的数据
+    """Result """
     results = [r for r in data['results'] if r['target_snr'] <= 18.001]
     
-    # 按 Target SNR 升序排序 (方便绘图)
     results.sort(key=lambda x: x['target_snr'])
     
     if not results:
-        print("❌ 没有 target_snr <= 18 的数据，无法绘图。")
+        print("  target_snr <= 18 ")
         return
 
-    # 提取数据
     snr_values = [r['target_snr'] for r in results]
     cluster_sizes = [r['average_cluster_size'] for r in results]
     cluster_stds = [r.get('std_cluster_size', r.get('std_dev', 0)) for r in results]
     
-    # 丢包率数据
     has_packet_loss = 'average_packet_loss' in results[0]
     if has_packet_loss:
-        packet_losses = [r['average_packet_loss'] * 100 for r in results]  # 转为百分比
+        packet_losses = [r['average_packet_loss'] * 100 for r in results]
         packet_loss_per_node = [r.get('packet_loss_per_node', {}) for r in results]
     
-    # 实际 SNR 数据
     has_actual_snr = 'avg_actual_snr' in results[0]
     if has_actual_snr:
         actual_snr_values = [r.get('avg_actual_snr', 0) for r in results]
         actual_snr_stds = [r.get('std_actual_snr', 0) for r in results]
         actual_snr_per_node = [r.get('actual_snr_per_node', {}) for r in results]
 
-    # 设置图表保存前缀
     if output_prefix is None:
         output_prefix = 'snr_experiment_plot'
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # 通用 X 轴标签 (去除 Target)
     x_label = 'Leader Received SNR (dB)'
     
     def save_current_fig(suffix):
         filename = f'{output_prefix}_{suffix}_{timestamp}.png'
-        # 优化边距
         plt.tight_layout() 
         plt.savefig(filename, dpi=150, bbox_inches='tight')
         plt.close()
@@ -95,53 +85,39 @@ def plot_results(data, output_prefix=None):
         return filename
 
     # ==========================================
-    # 图1: Cluster Size vs SNR (Combined: Avg + Raw Discrete)
     # ==========================================
     plt.figure(figsize=(10, 7))
     
-    # 准备原始数据
     raw_measurements = [r.get('raw_cluster_measurements', r.get('raw_measurements', [])) 
                         for r in results]
     
-    # 学术蓝颜色定义
     academic_blue = '#1f77b4'
     
-    # 1. 绘制散点 (Raw Discrete Points) with Jitter
-    # 让离散点在背景中显示，稍微抖动 X 轴
     if raw_measurements and raw_measurements[0]:
         scatter_x = []
         scatter_y = []
         for snr, measurements in zip(snr_values, raw_measurements):
             for m in measurements:
-                # 添加随机抖动到 X 轴 (SNR)
-                # 范围稍微加大一点点 +/- 0.2 以分散密集点
                 jitter = np.random.uniform(-0.2, 0.2)
                 scatter_x.append(snr + jitter)
                 scatter_y.append(m)
         
-        # 散点颜色使用淡化的学术蓝，增加透明度降低重叠感
         plt.scatter(scatter_x, scatter_y, alpha=0.08, color=academic_blue, s=30, 
                    label='Raw Measurements', zorder=1)
 
-    # 2. 绘制平均值折线 (Average Line)
-    # 线条加粗 (linewidth=4)，颜色使用深学术蓝
     plt.plot(snr_values, cluster_sizes, linewidth=4, 
              color=academic_blue, label='Avg Cluster Size', zorder=2)
 
-    # 字体与坐标轴设置
-    plt.xlabel(x_label, fontsize=18, fontweight='normal')  # 加大字号
-    plt.ylabel('Cluster Size (nodes)', fontsize=18, fontweight='normal') # 加大字号
-    plt.tick_params(axis='both', which='major', labelsize=16) # 加大刻度字号
+    plt.xlabel(x_label, fontsize=18, fontweight='normal')
+    plt.ylabel('Cluster Size (nodes)', fontsize=18, fontweight='normal')
+    plt.tick_params(axis='both', which='major', labelsize=16)
     
-    # 去除顶部标题
     # plt.title('Cluster Size vs Leader Received SNR (Avg & Raw)', ...) 
     
     plt.grid(True, alpha=0.3)
     
-    # 优化图例：移到右下角，去除边框
     plt.legend(loc='lower right', frameon=False, fontsize=16)
     
-    # 设置 Y 轴范围
     max_y = max(data.get('total_nodes', 6), max(cluster_sizes) if cluster_sizes else 6)
     plt.ylim(bottom=0, top=max_y + 0.5)
     
@@ -149,7 +125,6 @@ def plot_results(data, output_prefix=None):
     
     if has_packet_loss:
         # ==========================================
-        # 图3: Packet Loss Rate vs SNR
         # ==========================================
         plt.figure(figsize=(8, 6))
         plt.plot(snr_values, packet_losses, 'o-', linewidth=2, markersize=8,
@@ -164,7 +139,6 @@ def plot_results(data, output_prefix=None):
         save_current_fig("packet_loss")
         
         # ==========================================
-        # 图4: Packet Loss per Node
         # ==========================================
         plt.figure(figsize=(8, 6))
         all_nodes = set()
@@ -191,7 +165,6 @@ def plot_results(data, output_prefix=None):
     
     if has_actual_snr:
         # ==========================================
-        # 图5: Actual SNR vs Target
         # ==========================================
         plt.figure(figsize=(8, 6))
         min_snr = min(snr_values)
@@ -212,7 +185,6 @@ def plot_results(data, output_prefix=None):
         save_current_fig("actual_snr")
         
         # ==========================================
-        # 图6: Actual SNR per Node
         # ==========================================
         plt.figure(figsize=(8, 6))
         all_nodes = set()
@@ -271,7 +243,7 @@ def print_summary(data):
             loss = r['average_packet_loss'] * 100
             diff = actual - target
             diff_str = f"({diff:+.1f})" if has_actual_snr else ""
-            print(f"{target:<10.1f} {actual:.1f} ± {actual_std:.1f} {diff_str:<6} {size:.2f} ± {std:.2f}      {loss:.1f}%")
+            print(f"{target:<10.1f} {actual:.1f}  {actual_std:.1f} {diff_str:<6} {size:.2f}  {std:.2f}      {loss:.1f}%")
     elif has_packet_loss:
         print(f"{'SNR(dB)':<10} {'Cluster Size':<15} {'Packet Loss':<10}")
         print("-" * 35)
@@ -280,7 +252,7 @@ def print_summary(data):
             size = r['average_cluster_size']
             std = r.get('std_cluster_size', r.get('std_dev', 0))
             loss = r['average_packet_loss'] * 100
-            print(f"{snr:<10.1f} {size:.2f} ± {std:.2f}      {loss:.1f}%")
+            print(f"{snr:<10.1f} {size:.2f}  {std:.2f}      {loss:.1f}%")
     else:
         print(f"{'SNR(dB)':<10} {'Cluster Size':<15}")
         print("-" * 25)
@@ -288,7 +260,7 @@ def print_summary(data):
             snr = r['target_snr']
             size = r['average_cluster_size']
             std = r.get('std_cluster_size', r.get('std_dev', 0))
-            print(f"{snr:<10.1f} {size:.2f} ± {std:.2f}")
+            print(f"{snr:<10.1f} {size:.2f}  {std:.2f}")
     
     print("=" * 75)
     

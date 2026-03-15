@@ -445,15 +445,15 @@ def argument_parser():
 
 def run_control_server(tb, port):
     """
-    UDP 控制服务器 - 支持运行时动态调整增益
+    UDP Control Server - Supports dynamic gain adjustment at runtime
     
-    协议 (JSON):
+    Protocol (JSON):
         {"cmd": "set_tx_gain", "value": 0.5}
         {"cmd": "set_rx_gain", "value": 0.5}
         {"cmd": "get_gains"}
         {"cmd": "ping"}
     
-    响应:
+    Response:
         {"status": "ok", "tx_gain": 0.5, "rx_gain": 0.5}
         {"status": "error", "msg": "..."}
     """
@@ -462,8 +462,8 @@ def run_control_server(tb, port):
     sock.bind(('127.0.0.1', port))
     sock.settimeout(1.0)
     
-    print(f"🎛️  控制服务器启动: 端口 {port}")
-    print(f"   支持命令: set_tx_gain, set_rx_gain, get_gains, ping")
+    print(f"  Control server started on port {port}")
+    print(f"   Supported commands: set_tx_gain, set_rx_gain, get_gains, ping")
     
     while True:
         try:
@@ -474,17 +474,17 @@ def run_control_server(tb, port):
                 
                 if cmd.get('cmd') == 'set_tx_gain':
                     value = float(cmd.get('value', 0.5))
-                    value = max(0.0, min(1.0, value))  # 限制范围
+                    value = max(0.0, min(1.0, value))  # Limit range
                     tb.set_tx_gain(value)
                     response['tx_gain'] = value
-                    print(f"🔧 TX Gain -> {value}")
+                    print(f" TX Gain -> {value}")
                     
                 elif cmd.get('cmd') == 'set_rx_gain':
                     value = float(cmd.get('value', 0.5))
                     value = max(0.0, min(1.0, value))
                     tb.set_rx_gain(value)
                     response['rx_gain'] = value
-                    print(f"🔧 RX Gain -> {value}")
+                    print(f" RX Gain -> {value}")
                     
                 elif cmd.get('cmd') == 'get_gains':
                     response['tx_gain'] = tb.get_tx_gain()
@@ -505,7 +505,7 @@ def run_control_server(tb, port):
         except socket.timeout:
             continue
         except Exception as e:
-            print(f"控制服务器错误: {e}")
+            print(f"Control server error: {e}")
             break
 
 
@@ -513,9 +513,9 @@ def main(top_block_cls=wifi_transceiver, options=None):
     if options is None:
         options = argument_parser().parse_args()
 
-    # 无 GUI 模式
+    # No GUI mode
     if options.no_gui:
-        # 设置虚拟显示器
+        # Set up virtual display
         os.environ['QT_QPA_PLATFORM'] = 'offscreen'
         qapp = Qt.QApplication(sys.argv)
         
@@ -523,7 +523,7 @@ def main(top_block_cls=wifi_transceiver, options=None):
         tb.start()
         tb.flowgraph_started.set()
         
-        # 启动控制服务器线程
+        # Start control server thread
         ctrl_thread = threading.Thread(
             target=run_control_server, 
             args=(tb, options.ctrl_port),
@@ -531,13 +531,13 @@ def main(top_block_cls=wifi_transceiver, options=None):
         )
         ctrl_thread.start()
         
-        print(f"🚀 PHY 层已启动 (无 GUI 模式)")
+        print(f" PHY layer started (No GUI mode)")
         print(f"   SDR: {options.sdr_args}")
-        print(f"   端口: {options.udp_recv_port} (recv) / {options.udp_send_port} (send)")
-        print(f"   按 Ctrl+C 停止...")
+        print(f"   Port: {options.udp_recv_port} (recv) / {options.udp_send_port} (send)")
+        print(f"   Press Ctrl+C to stop...")
         
         def sig_handler(sig=None, frame=None):
-            print("\n🛑 正在停止...")
+            print("\n Stopping...")
             tb.stop()
             tb.wait()
             sys.exit(0)
@@ -545,14 +545,14 @@ def main(top_block_cls=wifi_transceiver, options=None):
         signal.signal(signal.SIGINT, sig_handler)
         signal.signal(signal.SIGTERM, sig_handler)
         
-        # 保持运行
+        # Keep running
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
             sig_handler()
     else:
-        # GUI 模式 (原来的行为)
+        # GUI mode (Original behavior)
         qapp = Qt.QApplication(sys.argv)
 
         tb = top_block_cls(rx_gain=options.rx_gain, sdr_args=options.sdr_args, tx_gain=options.tx_gain, udp_recv_port=options.udp_recv_port, udp_send_port=options.udp_send_port)
@@ -560,7 +560,7 @@ def main(top_block_cls=wifi_transceiver, options=None):
         tb.start()
         tb.flowgraph_started.set()
         
-        # 启动控制服务器线程
+        # Start control server thread
         ctrl_thread = threading.Thread(
             target=run_control_server, 
             args=(tb, options.ctrl_port),

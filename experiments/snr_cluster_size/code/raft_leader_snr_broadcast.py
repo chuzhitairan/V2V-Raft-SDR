@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-带 SNR 广播的 Leader 节点
+ SNR Broadcast  Leader Node 
 =========================
 
-在固定领导者 Raft 基础上，Leader 周期性广播它观测到的各节点 SNR，
-让 Follower 可以据此调整发射增益，实现自动功率控制。
+ Raft Leader Broadcast Node  SNR
+ Follower Adjust Gain 
 
-新增消息类型:
-    - SNR_REPORT: Leader -> All, 携带 {node_id: snr} 字典
+:
+    - SNR_REPORT: Leader -> All,  {node_id: snr} 
 
-使用方法:
+:
     python3 raft_leader_snr_broadcast.py --id 1 --role leader --total 6 --tx 10001 --rx 20001
 
-作者: V2V-Raft-SDR 项目
+: V2V-Raft-SDR 
 """
 
 import socket
@@ -27,18 +27,17 @@ BROADCAST_IP = "127.0.0.1"
 
 
 # ============================================================================
-# 数据结构
 # ============================================================================
 
 @dataclass
 class PhyState:
-    """物理层状态"""
+    """Status """
     snr: float = 0.0
 
 
 @dataclass
 class LogEntry:
-    """日志条目"""
+    """Log """
     term: int
     index: int
     command: str
@@ -47,7 +46,7 @@ class LogEntry:
 
 @dataclass
 class Message:
-    """消息结构 (扩展版，支持 SNR_REPORT)"""
+    """ ( SNR_REPORT)"""
     type: str           # APPEND, APPEND_RESPONSE, SNR_REPORT
     term: int
     sender_id: int
@@ -58,7 +57,6 @@ class Message:
     last_log_index: int = 0
     success: bool = False
     phy_state: PhyState = field(default_factory=PhyState)
-    # 新增: SNR 报告字段
     snr_report: Dict[int, float] = field(default_factory=dict)  # {node_id: snr}
 
     def to_json(self) -> str:
@@ -72,7 +70,6 @@ class Message:
                 data['phy_state'] = PhyState(**data['phy_state'])
             if 'entries' in data:
                 data['entries'] = [LogEntry(**e) for e in data['entries']]
-            # snr_report 的 key 需要转回 int
             if 'snr_report' in data and data['snr_report']:
                 data['snr_report'] = {int(k): v for k, v in data['snr_report'].items()}
             return Message(**data)
@@ -81,15 +78,14 @@ class Message:
 
 
 # ============================================================================
-# Leader 节点 (带 SNR 广播)
 # ============================================================================
 
 class LeaderWithSNRBroadcast:
     """
-    带 SNR 广播功能的 Leader
+     SNR Broadcast  Leader
     
-    在原有功能基础上，周期性广播观测到的各节点 SNR，
-    让 Follower 可以据此调整发射增益。
+    Broadcast Node  SNR
+     Follower Adjust Gain 
     """
     
     def __init__(self, node_id: int, total_nodes: int, 
@@ -101,13 +97,13 @@ class LeaderWithSNRBroadcast:
         self.rx_port = rx_port
         self.leader_id = node_id
         
-        # Raft 状态
+        # Raft Status 
         self.current_term = 1
         self.log: List[LogEntry] = []
         self.commit_index = 0
         self.last_applied = 0
         
-        # Leader 状态
+        # Leader Status 
         self.next_index: Dict[int, int] = {}
         self.match_index: Dict[int, int] = {}
         for i in range(1, total_nodes + 1):
@@ -115,17 +111,16 @@ class LeaderWithSNRBroadcast:
                 self.next_index[i] = 1
                 self.match_index[i] = 0
         
-        # 邻居 SNR 记录
         self.peers: Dict[int, dict] = {}
         
-        # 配置
+        # Config 
         self.heartbeat_interval = 0.2
-        self.snr_threshold = 0.0        # Leader 不过滤
+        self.snr_threshold = 0.0
         self.status_interval = 2.0
-        self.snr_report_interval = 1.0  # SNR 报告间隔
-        self.target_snr = 20.0          # 目标 SNR
+        self.snr_report_interval = 1.0
+        self.target_snr = 20.0          # Target  SNR
         
-        # 统计
+        # Stats 
         self.stats = {
             'heartbeats_sent': 0,
             'snr_reports_sent': 0,
@@ -133,19 +128,18 @@ class LeaderWithSNRBroadcast:
             'commands_committed': 0,
         }
         
-        # 网络
         self.lock = threading.RLock()
         self.running = True
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((BROADCAST_IP, self.rx_port))
         
-        print(f"👑 [节点 {node_id}] LEADER (SNR 广播版)")
+        print(f" [Node  {node_id}] LEADER (SNR Broadcast )")
         print(f"   TX:{tx_port} RX:{rx_port}")
-        print(f"   目标 SNR: {self.target_snr} dB")
+        print(f"   Target  SNR: {self.target_snr} dB")
 
     def send_heartbeat(self):
-        """发送心跳"""
+        """Send Heartbeat """
         with self.lock:
             min_next = min(self.next_index.values()) if self.next_index else len(self.log) + 1
             prev_idx = min_next - 1
@@ -165,9 +159,8 @@ class LeaderWithSNRBroadcast:
             self.stats['heartbeats_sent'] += 1
     
     def send_snr_report(self):
-        """广播 SNR 报告"""
+        """Broadcast  SNR """
         with self.lock:
-            # 收集当前各节点 SNR
             snr_data = {}
             for peer_id, info in self.peers.items():
                 snr_data[peer_id] = round(info['snr'], 1)
@@ -185,7 +178,7 @@ class LeaderWithSNRBroadcast:
             self.stats['snr_reports_sent'] += 1
     
     def propose_command(self, command: str) -> bool:
-        """提交命令"""
+        """"""
         with self.lock:
             entry = LogEntry(
                 term=self.current_term,
@@ -193,12 +186,12 @@ class LeaderWithSNRBroadcast:
                 command=command
             )
             self.log.append(entry)
-            print(f"📝 [提交] 日志 #{entry.index}: {command}")
+            print(f" [] Log  #{entry.index}: {command}")
             self._replicate_log()
             return True
     
     def _replicate_log(self):
-        """复制日志"""
+        """Log """
         with self.lock:
             min_next = min(self.next_index.values()) if self.next_index else len(self.log) + 1
             prev_idx = min_next - 1
@@ -219,7 +212,7 @@ class LeaderWithSNRBroadcast:
                 self.stats['entries_replicated'] += len(entries)
     
     def _handle_append_response(self, msg: Message):
-        """处理复制响应"""
+        """"""
         peer_id = msg.sender_id
         with self.lock:
             if msg.success:
@@ -230,7 +223,7 @@ class LeaderWithSNRBroadcast:
                 self.next_index[peer_id] = max(1, self.next_index.get(peer_id, 1) - 1)
     
     def _try_commit(self):
-        """尝试提交"""
+        """"""
         old_commit = self.commit_index
         for n in range(len(self.log), self.commit_index, -1):
             count = 1
@@ -245,20 +238,19 @@ class LeaderWithSNRBroadcast:
             self.send_heartbeat()
     
     def _apply_committed(self):
-        """应用已提交日志"""
+        """Already Log """
         while self.last_applied < self.commit_index:
             self.last_applied += 1
             entry = self.log[self.last_applied - 1]
             self.stats['commands_committed'] += 1
-            print(f"✨ [共识] 执行命令 #{entry.index}: {entry.command}")
+            print(f" []  #{entry.index}: {entry.command}")
     
     def _update_peer(self, sender_id: int, phy_state: PhyState):
-        """更新邻居 SNR"""
+        """ SNR"""
         now = time.time()
         if sender_id not in self.peers:
             self.peers[sender_id] = {'snr': 0.0, 'last_seen': 0.0, 'count': 0}
         
-        # 使用指数移动平均平滑 SNR
         alpha = 0.3
         old_snr = self.peers[sender_id]['snr']
         new_snr = phy_state.snr
@@ -272,16 +264,16 @@ class LeaderWithSNRBroadcast:
         self.peers[sender_id]['count'] += 1
     
     def _broadcast(self, msg: Message):
-        """广播消息"""
+        """Broadcast """
         try:
             data = msg.to_json().encode('utf-8')
             self.sock.sendto(data, (BROADCAST_IP, self.tx_port))
         except Exception as e:
-            print(f"❌ 发送失败: {e}")
+            print(f" Send Fail : {e}")
 
     def recv_loop(self):
-        """接收线程"""
-        print("🔵 接收线程启动")
+        """Receive """
+        print(" Receive Start ")
         while self.running:
             try:
                 data, _ = self.sock.recvfrom(4096)
@@ -295,11 +287,11 @@ class LeaderWithSNRBroadcast:
                         
             except Exception as e:
                 if self.running:
-                    print(f"接收错误: {e}")
+                    print(f"Receive Error: {e}")
     
     def main_loop(self):
-        """主循环"""
-        print("🟢 主循环启动")
+        """"""
+        print(" Start ")
         last_heartbeat = time.time()
         last_status = time.time()
         last_snr_report = time.time()
@@ -307,17 +299,15 @@ class LeaderWithSNRBroadcast:
         while self.running:
             now = time.time()
             
-            # 发送心跳
+            # Send Heartbeat 
             if now - last_heartbeat >= self.heartbeat_interval:
                 self.send_heartbeat()
                 last_heartbeat = now
             
-            # 发送 SNR 报告
             if now - last_snr_report >= self.snr_report_interval:
                 self.send_snr_report()
                 last_snr_report = now
             
-            # 打印状态
             if now - last_status >= self.status_interval:
                 self._print_status()
                 last_status = now
@@ -325,31 +315,31 @@ class LeaderWithSNRBroadcast:
             time.sleep(0.05)
     
     def _print_status(self):
-        """打印状态"""
+        """Status """
         with self.lock:
-            print(f"\n📊 [Leader SNR 观测] 目标: {self.target_snr} dB")
+            print(f"\n [Leader SNR ] Target : {self.target_snr} dB")
             for peer_id in sorted(self.peers.keys()):
                 info = self.peers[peer_id]
                 snr = info['snr']
                 diff = snr - self.target_snr
                 if abs(diff) <= 2:
-                    status = "✅"
+                    status = ""
                 elif diff < -2:
-                    status = "📉 需增加增益"
+                    status = " Gain "
                 else:
-                    status = "📈 需降低增益"
+                    status = " Gain "
                 print(f"   Node {peer_id}: {snr:5.1f} dB ({diff:+.1f}) {status}")
             
-            print(f"   心跳: {self.stats['heartbeats_sent']}, SNR报告: {self.stats['snr_reports_sent']}")
+            print(f"   Heartbeat : {self.stats['heartbeats_sent']}, SNR: {self.stats['snr_reports_sent']}")
     
     def input_loop(self):
-        """输入线程"""
-        print("⌨️  输入命令 (直接回车发送'向左变道')")
+        """"""
+        print("   (Send '')")
         while self.running:
             try:
                 cmd = input().strip()
                 if not cmd:
-                    cmd = "向左变道"
+                    cmd = ""
                 self.propose_command(cmd)
             except EOFError:
                 break
@@ -360,23 +350,22 @@ class LeaderWithSNRBroadcast:
 
 
 # ============================================================================
-# 主程序
 # ============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="Leader 节点 (带 SNR 广播)")
-    parser.add_argument("--id", type=int, required=True, help="节点 ID")
-    parser.add_argument("--role", type=str, default='leader', help="角色 (仅支持 leader)")
-    parser.add_argument("--total", type=int, default=6, help="总节点数")
-    parser.add_argument("--tx", type=int, required=True, help="TX 端口")
-    parser.add_argument("--rx", type=int, required=True, help="RX 端口")
-    parser.add_argument("--target-snr", type=float, default=20.0, help="目标 SNR (dB)")
-    parser.add_argument("--snr-report-interval", type=float, default=1.0, help="SNR 报告间隔 (秒)")
-    parser.add_argument("--status-interval", type=float, default=2.0, help="状态打印间隔 (秒)")
+    parser = argparse.ArgumentParser(description="Leader Node  ( SNR Broadcast )")
+    parser.add_argument("--id", type=int, required=True, help="Node  ID")
+    parser.add_argument("--role", type=str, default='leader', help=" ( leader)")
+    parser.add_argument("--total", type=int, default=6, help="Node ")
+    parser.add_argument("--tx", type=int, required=True, help="TX Port ")
+    parser.add_argument("--rx", type=int, required=True, help="RX Port ")
+    parser.add_argument("--target-snr", type=float, default=20.0, help="Target  SNR (dB)")
+    parser.add_argument("--snr-report-interval", type=float, default=1.0, help="SNR  ()")
+    parser.add_argument("--status-interval", type=float, default=2.0, help="Status  ()")
     args = parser.parse_args()
     
     if args.role != 'leader':
-        print("⚠️  此脚本仅支持 leader 角色")
+        print("   leader ")
         return
     
     node = LeaderWithSNRBroadcast(
@@ -398,7 +387,7 @@ def main():
     try:
         node.main_loop()
     except KeyboardInterrupt:
-        print("\n🛑 停止")
+        print("\n Stop ")
         node._print_status()
     finally:
         node.stop()

@@ -1,26 +1,26 @@
 #!/bin/bash
 # ============================================
-# SNR-集群规模关系实验 - 电脑 1 (4 台 E200)
-# Node 1 = Leader (实验控制 + SNR 广播)
-# Node 2-4 = Follower (增益自动调整)
+# SNR- - 1 (4 E200)
+# Node 1 = Leader ( + SNR Broadcast )
+# Node 2-4 = Follower (Gain Adjust )
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-# SDR 配置 (4 台 E200)
+# SDR Config (4 E200)
 SDR_ARGS=(
-    "addr=192.168.1.10"   # Node 1 (Leader)
-    "addr=192.168.1.11"   # Node 2
-    "addr=192.168.1.12"   # Node 3
-    "addr=192.168.1.13"   # Node 4
+ "addr=192.168.1.10" # Node 1 (Leader)
+ "addr=192.168.1.11" # Node 2
+ "addr=192.168.1.12" # Node 3
+ "addr=192.168.1.13" # Node 4
 )
 
 NODE_IDS=(1 2 3 4)
 
-# 配置参数
-# 用法: ./run_snr_experiment.sh [LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR] [STATUS_INTERVAL]
-# 示例: ./run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
+# Config 
+# : ./run_snr_experiment.sh [LEADER_TX] [LEADER_RX] [FOLLOWER_TX] [FOLLOWER_RX] [START_SNR] [STATUS_INTERVAL]
+# : ./run_snr_experiment.sh 0.8 0.9 0.7 0.9 20.0 2.0
 LEADER_TX_GAIN=${1:-0.8}
 LEADER_RX_GAIN=${2:-0.9}
 FOLLOWER_TX_GAIN=${3:-0.7}
@@ -28,22 +28,22 @@ FOLLOWER_RX_GAIN=${4:-0.9}
 START_SNR=${5:-20.0}
 STATUS_INTERVAL=${6:-2.0}
 
-# 端口配置
+# Port Config 
 APP_TX_PORTS=(10001 10002 10003 10004)
 APP_RX_PORTS=(20001 20002 20003 20004)
 CTRL_PORTS=(9001 9002 9003 9004)
 
-# 全局配置
+# Config 
 TOTAL_NODES=6
 LEADER_ID=1
 
-# 窗口布局 (2x2)
+# (2x2)
 get_screen_size() {
-    if command -v xdpyinfo &> /dev/null; then
-        xdpyinfo | grep dimensions | awk '{print $2}'
-    else
-        echo "1920x1080"
-    fi
+ if command -v xdpyinfo &> /dev/null; then
+ xdpyinfo | grep dimensions | awk '{print $2}'
+ else
+ echo "1920x1080"
+ fi
 }
 
 SCREEN_SIZE=$(get_screen_size)
@@ -58,49 +58,49 @@ WIN_COLS=80
 WIN_ROWS=24
 
 check_phy_ready() {
-    local port=$1
-    local timeout=30
-    local count=0
-    
-    while [ $count -lt $timeout ]; do
-        response=$(echo '{"cmd":"ping"}' | timeout 1 nc -u -w1 127.0.0.1 $port 2>/dev/null)
-        if [[ "$response" == *"pong"* ]]; then
-            return 0
-        fi
-        sleep 1
-        count=$((count + 1))
-    done
-    return 1
+ local port=$1
+ local timeout=30
+ local count=0
+ 
+ while [ $count -lt $timeout ]; do
+ response=$(echo '{"cmd":"ping"}' | timeout 1 nc -u -w1 127.0.0.1 $port 2>/dev/null)
+ if [[ "$response" == *"pong"* ]]; then
+ return 0
+ fi
+ sleep 1
+ count=$((count + 1))
+ done
+ return 1
 }
 
 cleanup() {
-    echo ""
-    echo "🛑 停止所有进程..."
-    pkill -f "v2v_hw_phy.py" 2>/dev/null
-    pkill -f "raft_leader_snr_experiment.py" 2>/dev/null
-    pkill -f "raft_follower_snr_experiment.py" 2>/dev/null
-    sleep 2
-    echo "✅ 清理完成"
+ echo ""
+ echo " Stop ..."
+ pkill -f "v2v_hw_phy.py" 2>/dev/null
+ pkill -f "raft_leader_snr_experiment.py" 2>/dev/null
+ pkill -f "raft_follower_snr_experiment.py" 2>/dev/null
+ sleep 2
+ echo " "
 }
 
 trap cleanup EXIT INT TERM
 
 echo "============================================"
-echo "SNR-集群规模关系实验 - E200 节点"
+echo "SNR- - E200 Node "
 echo "============================================"
 echo "Leader: Node 1 (TX=$LEADER_TX_GAIN, RX=$LEADER_RX_GAIN)"
 echo "Follower: Node 2-4 (TX=$FOLLOWER_TX_GAIN, RX=$FOLLOWER_RX_GAIN)"
-echo "起始 SNR: $START_SNR dB"
+echo " SNR: $START_SNR dB"
 echo ""
-echo "实验流程:"
-echo "  1. SNR 稳定后自动开始测量"
-echo "  2. 每个 SNR 测量 100 次集群规模"
-echo "  3. SNR 每次降低 2 dB"
-echo "  4. 平均集群规模≤1 时结束"
+echo ":"
+echo " 1. SNR "
+echo " 2. SNR 100 "
+echo " 3. SNR 2 dB"
+echo " 4. Avg 1 End "
 echo "============================================"
 echo ""
 
-# 清理旧进程
+# 
 pkill -f "v2v_hw_phy.py" 2>/dev/null
 pkill -f "raft_leader_snr_experiment.py" 2>/dev/null
 pkill -f "raft_follower_snr_experiment.py" 2>/dev/null
@@ -109,152 +109,152 @@ pkill -f "raft_follower_gain_adjust.py" 2>/dev/null
 sleep 2
 
 # ============================================
-# 第一阶段: 启动 PHY 层
+# : Start PHY 
 # ============================================
-echo "📡 第一阶段: 启动 PHY 层"
+echo " : Start PHY "
 echo "--------------------------------------------"
 
 PHY_PIDS=()
 
 for i in "${!NODE_IDS[@]}"; do
-    node_id=${NODE_IDS[$i]}
-    sdr_args=${SDR_ARGS[$i]}
-    tx_port=${APP_TX_PORTS[$i]}
-    rx_port=${APP_RX_PORTS[$i]}
-    ctrl_port=${CTRL_PORTS[$i]}
-    
-    # Leader 使用指定增益，Follower 使用初始增益
-    if [ $node_id -eq $LEADER_ID ]; then
-        tx_gain=$LEADER_TX_GAIN
-        rx_gain=$LEADER_RX_GAIN
-    else
-        tx_gain=$FOLLOWER_TX_GAIN
-        rx_gain=$FOLLOWER_RX_GAIN
-    fi
-    
-    echo "   启动 Node $node_id PHY (增益: TX=$tx_gain, RX=$rx_gain)..."
-    
-    python3 $PROJECT_DIR/core/v2v_hw_phy.py \
-        --sdr-args "$sdr_args" \
-        --tx-gain $tx_gain \
-        --rx-gain $rx_gain \
-        --udp-recv-port $tx_port \
-        --udp-send-port $rx_port \
-        --ctrl-port $ctrl_port \
-        --no-gui &
-    
-    PHY_PIDS+=($!)
-    
-    echo "   等待 Node $node_id PHY 就绪..."
-    if check_phy_ready $ctrl_port; then
-        echo "   ✅ Node $node_id PHY 就绪"
-    else
-        echo "   ❌ Node $node_id PHY 启动超时"
-        cleanup
-        exit 1
-    fi
-    
-    sleep 1
+ node_id=${NODE_IDS[$i]}
+ sdr_args=${SDR_ARGS[$i]}
+ tx_port=${APP_TX_PORTS[$i]}
+ rx_port=${APP_RX_PORTS[$i]}
+ ctrl_port=${CTRL_PORTS[$i]}
+ 
+ # Leader Gain Follower Gain 
+ if [ $node_id -eq $LEADER_ID ]; then
+ tx_gain=$LEADER_TX_GAIN
+ rx_gain=$LEADER_RX_GAIN
+ else
+ tx_gain=$FOLLOWER_TX_GAIN
+ rx_gain=$FOLLOWER_RX_GAIN
+ fi
+ 
+ echo " Start Node $node_id PHY (Gain : TX=$tx_gain, RX=$rx_gain)..."
+ 
+ python3 $PROJECT_DIR/core/v2v_hw_phy.py \
+ --sdr-args "$sdr_args" \
+ --tx-gain $tx_gain \
+ --rx-gain $rx_gain \
+ --udp-recv-port $tx_port \
+ --udp-send-port $rx_port \
+ --ctrl-port $ctrl_port \
+ --no-gui &
+ 
+ PHY_PIDS+=($!)
+ 
+ echo " Waiting Node $node_id PHY ..."
+ if check_phy_ready $ctrl_port; then
+ echo " Node $node_id PHY "
+ else
+ echo " Node $node_id PHY Start Timeout "
+ cleanup
+ exit 1
+ fi
+ 
+ sleep 1
 done
 
 echo ""
-echo "✅ 所有 PHY 层已就绪"
+echo " PHY "
 echo ""
 
 # ============================================
-# 第二阶段: 启动应用层
+# : Start 
 # ============================================
-echo "🚀 第二阶段: 启动应用层"
+echo " : Start "
 echo "--------------------------------------------"
 
 win_idx=0
 
 for node_id in "${NODE_IDS[@]}"; do
-    idx=-1
-    for i in "${!NODE_IDS[@]}"; do
-        if [ ${NODE_IDS[$i]} -eq $node_id ]; then
-            idx=$i
-            break
-        fi
-    done
-    
-    tx_port="${APP_TX_PORTS[$idx]}"
-    rx_port="${APP_RX_PORTS[$idx]}"
-    ctrl_port="${CTRL_PORTS[$idx]}"
-    
-    col=$((win_idx % COLS))
-    row=$((win_idx / COLS))
-    x=$((col * WIN_W_PX))
-    y=$((row * WIN_H_PX))
-    
-    if [ $node_id -eq $LEADER_ID ]; then
-        # Leader 节点 - 实验版
-        title="Node $node_id [LEADER] 实验控制"
-        color="yellow"
-        
-        echo "   启动 $title"
-        
-        xterm -bg black -fg $color -title "$title" \
-            -fa 'Monospace' -fs 14 \
-            -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
-            -e bash -c "
-                echo '=== $title ==='
-                echo 'PHY 已就绪，启动实验 Leader...'
-                python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
-                    --id $node_id \
-                    --total $TOTAL_NODES \
-                    --tx $tx_port \
-                    --rx $rx_port \
-                    --start-snr $START_SNR \
-                    --snr-step 2.0 \
-                    --measurements 100 \
-                    --stabilize-time 60.0 \
-                    --snr-tolerance 3.0 \
-                    --stable-count 3 \
-                    --min-peers 1
-                echo '应用层已停止，按回车关闭窗口...'
-                read
-            " &
-    else
-        # Follower 节点 - 实验版
-        title="Node $node_id [Follower] 增益调整"
-        color="white"
-        
-        echo "   启动 $title"
-        
-        xterm -bg black -fg $color -title "$title" \
-            -fa 'Monospace' -fs 14 \
-            -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
-            -e bash -c "
-                echo '=== $title ==='
-                echo 'PHY 已就绪，启动实验 Follower...'
-                python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
-                    --id $node_id \
-                    --total $TOTAL_NODES \
-                    --tx $tx_port \
-                    --rx $rx_port \
-                    --ctrl $ctrl_port \
-                    --target-snr $START_SNR \
-                    --init-gain $FOLLOWER_TX_GAIN \
-                    --status-interval $STATUS_INTERVAL
-                echo '应用层已停止，按回车关闭窗口...'
-                read
-            " &
-    fi
-    
-    win_idx=$((win_idx + 1))
-    sleep 0.5
+ idx=-1
+ for i in "${!NODE_IDS[@]}"; do
+ if [ ${NODE_IDS[$i]} -eq $node_id ]; then
+ idx=$i
+ break
+ fi
+ done
+ 
+ tx_port="${APP_TX_PORTS[$idx]}"
+ rx_port="${APP_RX_PORTS[$idx]}"
+ ctrl_port="${CTRL_PORTS[$idx]}"
+ 
+ col=$((win_idx % COLS))
+ row=$((win_idx / COLS))
+ x=$((col * WIN_W_PX))
+ y=$((row * WIN_H_PX))
+ 
+ if [ $node_id -eq $LEADER_ID ]; then
+ # Leader Node - 
+ title="Node $node_id [LEADER] "
+ color="yellow"
+ 
+ echo " Start $title"
+ 
+ xterm -bg black -fg $color -title "$title" \
+ -fa 'Monospace' -fs 14 \
+ -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
+ -e bash -c "
+ echo '=== $title ==='
+ echo 'PHY Start Leader...'
+ python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_leader_snr_experiment.py \
+ --id $node_id \
+ --total $TOTAL_NODES \
+ --tx $tx_port \
+ --rx $rx_port \
+ --start-snr $START_SNR \
+ --snr-step 2.0 \
+ --measurements 100 \
+ --stabilize-time 60.0 \
+ --snr-tolerance 3.0 \
+ --stable-count 3 \
+ --min-peers 1
+ echo 'Stop ...'
+ read
+ " &
+ else
+ # Follower Node - 
+ title="Node $node_id [Follower] Gain Adjust "
+ color="white"
+ 
+ echo " Start $title"
+ 
+ xterm -bg black -fg $color -title "$title" \
+ -fa 'Monospace' -fs 14 \
+ -geometry ${WIN_COLS}x${WIN_ROWS}+${x}+${y} \
+ -e bash -c "
+ echo '=== $title ==='
+ echo 'PHY Start Follower...'
+ python3 $PROJECT_DIR/experiments/snr_cluster_size/code/raft_follower_snr_experiment.py \
+ --id $node_id \
+ --total $TOTAL_NODES \
+ --tx $tx_port \
+ --rx $rx_port \
+ --ctrl $ctrl_port \
+ --target-snr $START_SNR \
+ --init-gain $FOLLOWER_TX_GAIN \
+ --status-interval $STATUS_INTERVAL
+ echo 'Stop ...'
+ read
+ " &
+ fi
+ 
+ win_idx=$((win_idx + 1))
+ sleep 0.5
 done
 
 echo ""
 echo "============================================"
-echo "SNR-集群规模实验节点已启动！"
+echo "SNR-Node Start "
 echo ""
-echo "📊 Leader 窗口会显示观测到的各节点 SNR"
-echo "🔧 Follower 会根据目标 SNR 自动调整 TX 增益"
-echo "🎯 SNR 稳定后自动开始集群规模测量"
+echo " Leader Node SNR"
+echo " Follower Target SNR Adjust TX Gain "
+echo " SNR "
 echo ""
-echo "按 Ctrl+C 停止所有节点"
+echo " Ctrl+C Stop Node "
 echo "============================================"
 
 wait
